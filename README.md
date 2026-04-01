@@ -99,6 +99,29 @@ Si `CRON_SECRET` manque ou est vide, la route refuse toutes les requêtes.
 - en production, l’absence de configuration critique provoque une erreur explicite
 - `RESEND_API_KEY` est optionnelle : si elle manque, l’envoi d’email est ignoré proprement
 
+## Tests E2E
+
+Playwright est configuré pour couvrir les parcours d’authentification principaux.
+
+Commandes :
+
+```bash
+npm run test:e2e
+npm run test:e2e:headed
+```
+
+Scénarios couverts :
+- redirection du dashboard sans session
+- inscription email/password
+- connexion email/password
+- déconnexion
+- Google OAuth si `E2E_GOOGLE_TEST_EMAIL` et `E2E_GOOGLE_TEST_PASSWORD` sont renseignés
+
+Variables optionnelles pour Playwright :
+- `E2E_BASE_URL`
+- `E2E_GOOGLE_TEST_EMAIL`
+- `E2E_GOOGLE_TEST_PASSWORD`
+
 ## Étape optionnelle suivante
 
 Quand tous les environnements auront migré sur les nouvelles variables, on pourra supprimer définitivement les alias legacy :

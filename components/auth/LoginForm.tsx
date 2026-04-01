@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Alert } from "@/components/ui/Alert";
@@ -37,6 +37,7 @@ export function LoginForm({
       : "Mode demo disponible si Supabase n'est pas configure."
   );
   const [loading, setLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   const safeRedirectTo = useMemo(
     () => (redirectTo && redirectTo.startsWith("/") ? redirectTo : "/dashboard"),
@@ -54,6 +55,10 @@ export function LoginForm({
 
     return info;
   }, [callbackError, info, registered]);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,7 +131,7 @@ export function LoginForm({
           <Card.Body>
             {supabaseEnabled ? (
               <div className="mb-4 space-y-4">
-                <GoogleAuthButton redirectTo={safeRedirectTo} />
+                <GoogleAuthButton redirectTo={safeRedirectTo} disabled={!hydrated} />
                 <div className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-slate-400">
                   <span className="h-px flex-1 bg-slate-200" />
                   <span>ou</span>
@@ -158,7 +163,7 @@ export function LoginForm({
                 required
               />
 
-              <Button type="submit" loading={loading} fullWidth>
+              <Button type="submit" loading={loading} disabled={!hydrated} fullWidth>
                 Se connecter
               </Button>
             </form>

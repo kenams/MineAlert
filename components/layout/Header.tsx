@@ -16,6 +16,7 @@ export type HeaderProps = {
   title?: string;
   currentPath?: string;
   lastUpdated?: string;
+  lastUpdatedState?: "fresh" | "stale" | "unavailable";
   notificationCount?: number;
   userName?: string;
   onMenuClick?: () => void;
@@ -64,6 +65,7 @@ export function Header({
   title,
   currentPath,
   lastUpdated,
+  lastUpdatedState = "fresh",
   notificationCount = 0,
   userName = "Investisseur",
   onMenuClick,
@@ -105,7 +107,17 @@ export function Header({
             {resolvedTitle}
           </p>
           {lastUpdated ? (
-            <p className="hidden text-xs text-slate-500 sm:block">
+            <p
+              data-testid="header-freshness"
+              className={cn(
+                "hidden text-xs sm:block",
+                lastUpdatedState === "stale"
+                  ? "text-amber-700"
+                  : lastUpdatedState === "unavailable"
+                    ? "text-slate-400"
+                    : "text-slate-500"
+              )}
+            >
               Dernière mise à jour : {lastUpdated}
             </p>
           ) : null}
@@ -124,6 +136,7 @@ export function Header({
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <button
             type="button"
+            data-testid="header-notifications-button"
             className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 hover:text-[#0A0A0A] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1B4332]/15"
             aria-label="Notifications"
           >

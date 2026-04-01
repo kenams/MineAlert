@@ -76,6 +76,11 @@ export const LIVE_NEWS_REFRESH_MS = 2 * 60 * 1000;
 export const LIVE_PORTFOLIO_REFRESH_MS = 60 * 1000;
 
 /**
+ * Rafraichissement client du statut global de fraicheur des donnees.
+ */
+export const SYSTEM_STATUS_REFRESH_MS = 60 * 1000;
+
+/**
  * Symboles mis en avant sur le dashboard principal.
  */
 export const DASHBOARD_FEATURED_SYMBOLS = ["XAU", "CU", "LI"] as const;
@@ -117,6 +122,11 @@ export const WATCHLIST_LIMITS: Record<UserPlan, number> = {
  * Fréquence de scraping globale de la plateforme.
  */
 export const SCRAPE_INTERVAL_MS = 5 * 60 * 1000;
+
+/**
+ * Seuil au-dela duquel les donnees sont considerees comme anciennes.
+ */
+export const DATA_FRESHNESS_WARNING_THRESHOLD_MS = 10 * 60 * 1000;
 
 /**
  * Expression cron par defaut pour la synchronisation automatique du scraper.

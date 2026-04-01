@@ -8,6 +8,7 @@ import type {
 } from "@/types";
 
 import {
+  DATA_FRESHNESS_WARNING_THRESHOLD_MS,
   DEFAULT_CURRENCY,
   MINERAL_CATEGORIES,
 } from "@/lib/utils/constants";
@@ -133,6 +134,51 @@ export function timeAgo(date: string): string {
 
   const days = Math.floor(hours / 24);
   return `il y a ${days}j`;
+}
+
+/**
+ * Retourne un libelle relatif a partir d'un age exprime en millisecondes.
+ */
+export function formatRelativeAge(ageMs: number): string {
+  const safeAge = Math.max(0, Math.floor(ageMs));
+  const minutes = Math.floor(safeAge / 60000);
+
+  if (minutes < 1) {
+    return "il y a moins d'une minute";
+  }
+
+  if (minutes < 60) {
+    return `il y a ${minutes} min`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+
+  if (hours < 24) {
+    return `il y a ${hours} h`;
+  }
+
+  const days = Math.floor(hours / 24);
+  return `il y a ${days} j`;
+}
+
+/**
+ * Formate un resume lisible de la fraicheur globale des donnees.
+ */
+export function formatDataFreshnessLabel(
+  latestDataAgeMs: number | null,
+  freshnessStatus: "fresh" | "stale" | "unavailable"
+): string {
+  if (freshnessStatus === "unavailable" || latestDataAgeMs === null) {
+    return "indisponible";
+  }
+
+  const relativeAge = formatRelativeAge(latestDataAgeMs);
+
+  if (freshnessStatus === "stale" || latestDataAgeMs > DATA_FRESHNESS_WARNING_THRESHOLD_MS) {
+    return `${relativeAge} (retard)`;
+  }
+
+  return relativeAge;
 }
 
 /**

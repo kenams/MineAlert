@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Alert } from "@/components/ui/Alert";
@@ -29,6 +29,11 @@ export default function RegisterPage(): JSX.Element {
       : "Sans configuration Supabase, l'inscription bascule proprement en mode demo."
   );
   const [loading, setLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -117,6 +122,7 @@ export default function RegisterPage(): JSX.Element {
                 <GoogleAuthButton
                   label="S'inscrire avec Google"
                   redirectTo="/dashboard"
+                  disabled={!hydrated}
                 />
                 <div className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-slate-400">
                   <span className="h-px flex-1 bg-slate-200" />
@@ -169,7 +175,7 @@ export default function RegisterPage(): JSX.Element {
                 <span>J'accepte les conditions d'utilisation et la politique de confidentialite.</span>
               </label>
 
-              <Button type="submit" loading={loading} fullWidth>
+              <Button type="submit" loading={loading} disabled={!hydrated} fullWidth>
                 Creer mon compte
               </Button>
             </form>

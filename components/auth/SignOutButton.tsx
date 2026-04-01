@@ -37,8 +37,12 @@ export function SignOutButton({
         }
       }
 
-      router.push("/login");
-      router.refresh();
+      if (typeof window !== "undefined") {
+        window.location.assign("/login");
+        return;
+      }
+
+      router.replace("/login");
     } finally {
       setIsSigningOut(false);
     }
@@ -47,6 +51,7 @@ export function SignOutButton({
   return (
     <Button
       {...props}
+      data-testid="sign-out-button"
       type="button"
       onClick={() => void handleSignOut()}
       loading={loading || isSigningOut}

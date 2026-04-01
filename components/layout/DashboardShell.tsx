@@ -6,7 +6,10 @@ import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { useAlerts } from "@/hooks/useAlerts";
 import { usePrices } from "@/hooks/usePrices";
+import { useSystemStatus } from "@/hooks/useSystemStatus";
+import { formatDataFreshnessLabel, timeAgo } from "@/lib/utils/formatters";
 import type { UserProfile } from "@/types";
 
 type DashboardShellProps = {
@@ -23,9 +26,11 @@ export function DashboardShell({
 }: DashboardShellProps): JSX.Element {
   const pathname = usePathname();
   const { prices } = usePrices();
+  const { alerts } = useAlerts();
+  const { status } = useSystemStatus();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const lastUpdated = useMemo(() => {
+  const fallbackLastUpdated = useMemo(() => {
     const latestTimestamp = prices.reduce<number>((latest, mineral) => {
       const timestamp = Date.parse(mineral.lastUpdated);
       return Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest;
@@ -35,12 +40,25 @@ export function DashboardShell({
       return undefined;
     }
 
-    return new Date(latestTimestamp).toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
+    return timeAgo(new Date(latestTimestamp).toISOString());
   }, [prices]);
+
+  const lastUpdated = useMemo(() => {
+    if (status) {
+      return formatDataFreshnessLabel(
+        status.latestDataAgeMs,
+        status.freshnessStatus
+      );
+    }
+
+    return fallbackLastUpdated;
+  }, [fallbackLastUpdated, status]);
+
+  const lastUpdatedState = status?.freshnessStatus ?? "fresh";
+  const notificationCount = useMemo(
+    () => alerts.filter((alert) => Boolean(alert.triggeredAt)).length,
+    [alerts]
+  );
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
@@ -58,7 +76,8 @@ export function DashboardShell({
           <Header
             currentPath={pathname}
             lastUpdated={lastUpdated}
-            notificationCount={2}
+            lastUpdatedState={lastUpdatedState}
+            notificationCount={notificationCount}
             userName={userProfile.fullName}
             onMenuClick={() => setMobileNavOpen(true)}
           />

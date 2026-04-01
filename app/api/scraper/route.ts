@@ -3,10 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCronSecret } from "@/lib/config/server";
 import { syncScrapedData } from "@/lib/scrapers";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { DATA_FRESHNESS_WARNING_THRESHOLD_MS } from "@/lib/utils/constants";
 
 export const dynamic = "force-dynamic";
-
-const FRESHNESS_WARNING_THRESHOLD_MS = 10 * 60 * 1000;
 const SYNC_LOG_SOURCE = "scraper-sync-api";
 
 type ScraperSyncLog = {
@@ -91,12 +90,12 @@ async function getLatestDataFreshness(): Promise<{
   const latestDataAt = new Date(latestTimestamp).toISOString();
   const latestDataAgeMs = Math.max(0, Date.now() - latestTimestamp);
 
-  return {
-    latestDataAt,
-    latestDataAgeMs,
-    isFresh: latestDataAgeMs <= FRESHNESS_WARNING_THRESHOLD_MS,
-  };
-}
+    return {
+      latestDataAt,
+      latestDataAgeMs,
+      isFresh: latestDataAgeMs <= DATA_FRESHNESS_WARNING_THRESHOLD_MS,
+    };
+  }
 
 /**
  * Declenche manuellement les scrapers live avec protection optionnelle par secret.

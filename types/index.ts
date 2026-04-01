@@ -150,6 +150,18 @@ export type PriceHistory = {
 };
 
 /**
+ * Etat de fraicheur global des donnees alimentees par le scraping.
+ */
+export type DataFreshnessStatus = {
+  mode: "live" | "demo";
+  latestPriceUpdateAt: string | null;
+  latestNewsUpdateAt: string | null;
+  latestDataAt: string | null;
+  latestDataAgeMs: number | null;
+  freshnessStatus: "fresh" | "stale" | "unavailable";
+};
+
+/**
  * Réponse API standardisée pour toutes les routes applicatives.
  */
 export type ApiResponse<T> = {

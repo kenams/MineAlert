@@ -15,8 +15,13 @@ import { useAlerts } from "@/hooks/useAlerts";
 import { useWatchlist } from "@/hooks/useMineral";
 import { useNews } from "@/hooks/useNews";
 import { usePriceHistory, usePrices } from "@/hooks/usePrices";
+import { useSystemStatus } from "@/hooks/useSystemStatus";
 import { DASHBOARD_FEATURED_SYMBOLS } from "@/lib/utils/constants";
-import { formatChange, formatPrice } from "@/lib/utils/formatters";
+import {
+  formatChange,
+  formatDataFreshnessLabel,
+  formatPrice,
+} from "@/lib/utils/formatters";
 
 /**
  * Dashboard principal MineAlert avec synthèse, watchlist, actualités et alertes.
@@ -30,6 +35,7 @@ export default function DashboardPage(): JSX.Element {
   const { articles, isLoading: newsLoading } = useNews({ page: 1 });
   const { alerts, remove } = useAlerts();
   const { watchlist, remove: removeFromWatchlist } = useWatchlist();
+  const { status: systemStatus } = useSystemStatus();
 
   const featuredPrices = useMemo(
     () =>
@@ -44,6 +50,22 @@ export default function DashboardPage(): JSX.Element {
 
   return (
     <div className="space-y-8">
+      {systemStatus?.freshnessStatus === "stale" ? (
+        <Alert variant="error" title="Rafraichissement des donnees en retard">
+          Dernier sync visible {formatDataFreshnessLabel(
+            systemStatus.latestDataAgeMs,
+            systemStatus.freshnessStatus
+          )}
+          . Verifiez le scraper ou relancez un sync manuel.
+        </Alert>
+      ) : null}
+
+      {systemStatus?.freshnessStatus === "unavailable" ? (
+        <Alert variant="info" title="Statut de fraicheur indisponible">
+          L'application ne peut pas encore verifier la date du dernier sync.
+        </Alert>
+      ) : null}
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Prix Or"

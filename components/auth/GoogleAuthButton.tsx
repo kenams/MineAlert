@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +10,7 @@ import { getAppUrl } from "@/lib/supabase/config";
 type GoogleAuthButtonProps = {
   redirectTo?: string;
   label?: string;
+  disabled?: boolean;
 };
 
 function GoogleIcon(): JSX.Element {
@@ -46,9 +47,15 @@ function GoogleIcon(): JSX.Element {
 export function GoogleAuthButton({
   redirectTo = "/dashboard",
   label = "Continuer avec Google",
+  disabled = false,
 }: GoogleAuthButtonProps): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   const callbackUrl = useMemo(() => {
     const url = new URL(getAppUrl("/auth/callback"));
@@ -100,7 +107,9 @@ export function GoogleAuthButton({
       <Button
         variant="outline"
         fullWidth
+        data-testid="google-auth-button"
         loading={loading}
+        disabled={disabled || !hydrated}
         icon={<GoogleIcon />}
         onClick={() => void handleGoogleAuth()}
         className="border-slate-200 bg-white text-[#0A0A0A] hover:bg-slate-50"

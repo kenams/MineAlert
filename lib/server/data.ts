@@ -16,7 +16,9 @@ import {
 } from "@/lib/server/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
+import { DATA_FRESHNESS_WARNING_THRESHOLD_MS } from "@/lib/utils/constants";
 import type {
+  DataFreshnessStatus,
   CurrencyCode,
   Mine,
   Mineral,
@@ -325,6 +327,43 @@ function filterNewsLocally(
 
     return true;
   });
+}
+
+function buildDataFreshnessStatus(input: {
+  mode: DataFreshnessStatus["mode"];
+  latestPriceUpdateAt: string | null;
+  latestNewsUpdateAt: string | null;
+}): DataFreshnessStatus {
+  const timestamps = [input.latestPriceUpdateAt, input.latestNewsUpdateAt]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => Date.parse(value))
+    .filter((value) => Number.isFinite(value));
+
+  if (timestamps.length === 0) {
+    return {
+      mode: input.mode,
+      latestPriceUpdateAt: input.latestPriceUpdateAt,
+      latestNewsUpdateAt: input.latestNewsUpdateAt,
+      latestDataAt: null,
+      latestDataAgeMs: null,
+      freshnessStatus: "unavailable",
+    };
+  }
+
+  const latestTimestamp = Math.max(...timestamps);
+  const latestDataAgeMs = Math.max(0, Date.now() - latestTimestamp);
+
+  return {
+    mode: input.mode,
+    latestPriceUpdateAt: input.latestPriceUpdateAt,
+    latestNewsUpdateAt: input.latestNewsUpdateAt,
+    latestDataAt: new Date(latestTimestamp).toISOString(),
+    latestDataAgeMs,
+    freshnessStatus:
+      latestDataAgeMs <= DATA_FRESHNESS_WARNING_THRESHOLD_MS
+        ? "fresh"
+        : "stale",
+  };
 }
 
 /**
@@ -817,5 +856,91 @@ export async function getMines(): Promise<Mine[]> {
     return (data as MineRow[]).map(mapMineRow);
   } catch {
     return DEMO_MINES;
+  }
+}
+
+/**
+ * Retourne l'etat global de fraicheur des donnees prix/news pour le monitoring de l'UI.
+ */
+export async function getDataFreshnessStatus(): Promise<DataFreshnessStatus> {
+  if (!isSupabaseConfigured()) {
+    const latestPriceUpdateAt = DEMO_MINERALS.reduce<string | null>(
+      (latest, mineral) => {
+        const currentTimestamp = Date.parse(mineral.lastUpdated);
+        const latestTimestamp = latest ? Date.parse(latest) : 0;
+
+        if (Number.isFinite(currentTimestamp) && currentTimestamp > latestTimestamp) {
+          return mineral.lastUpdated;
+        }
+
+        return latest;
+      },
+      null
+    );
+
+    const latestNewsUpdateAt = DEMO_NEWS.reduce<string | null>((latest, article) => {
+      const currentValue = article.scrapedAt || article.publishedAt;
+      const currentTimestamp = Date.parse(currentValue);
+      const latestTimestamp = latest ? Date.parse(latest) : 0;
+
+      if (Number.isFinite(currentTimestamp) && currentTimestamp > latestTimestamp) {
+        return currentValue;
+      }
+
+      return latest;
+    }, null);
+
+    return buildDataFreshnessStatus({
+      mode: "demo",
+      latestPriceUpdateAt,
+      latestNewsUpdateAt,
+    });
+  }
+
+  try {
+    const client = createSupabaseServerClient();
+    const [latestMineralResult, latestNewsResult] = await Promise.all([
+      client
+        .from("minerals")
+        .select("last_updated")
+        .order("last_updated", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      client
+        .from("news_articles")
+        .select("scraped_at")
+        .order("scraped_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    const latestPriceUpdateAt =
+      latestMineralResult.error ||
+      !latestMineralResult.data ||
+      typeof latestMineralResult.data.last_updated !== "string"
+        ? null
+        : latestMineralResult.data.last_updated;
+
+    const latestNewsUpdateAt =
+      latestNewsResult.error ||
+      !latestNewsResult.data ||
+      typeof latestNewsResult.data.scraped_at !== "string"
+        ? null
+        : latestNewsResult.data.scraped_at;
+
+    return buildDataFreshnessStatus({
+      mode: "live",
+      latestPriceUpdateAt,
+      latestNewsUpdateAt,
+    });
+  } catch {
+    return {
+      mode: "live",
+      latestPriceUpdateAt: null,
+      latestNewsUpdateAt: null,
+      latestDataAt: null,
+      latestDataAgeMs: null,
+      freshnessStatus: "unavailable",
+    };
   }
 }
