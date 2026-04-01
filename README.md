@@ -76,7 +76,9 @@ En prod, `NEXT_PUBLIC_SITE_URL` doit correspondre exactement à l’URL canoniqu
 
 ## Cron Vercel
 
-`vercel.json` déclenche `/api/scraper` toutes les 5 minutes.
+`vercel.json` déclenche `/api/scraper` une fois par jour à `08:00 UTC`, ce qui reste compatible avec Vercel Hobby.
+
+Si tu passes plus tard sur Vercel Pro, tu peux remonter la fréquence à `*/5 * * * *`.
 
 Pré-requis prod :
 1. définir `CRON_SECRET` dans Vercel
