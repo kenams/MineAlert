@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MineAlert
 
-## Getting Started
+Application Next.js de veille minière avec :
+- auth Supabase (`email/password` + Google OAuth)
+- dashboard, watchlist et alertes liées aux comptes utilisateurs
+- scraping live des prix et actualités
+- synchronisation automatique locale et Vercel Cron
 
-First, run the development server:
+## Lancement local
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Application locale : `http://localhost:3000`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Le projet charge les variables depuis `.env.local`. Utilise `.env.example` comme source de vérité.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Stratégie de configuration
 
-## Learn More
+MineAlert utilise maintenant une configuration unifiée avec :
+- variables publiques uniquement pour l’URL Supabase, la clé publishable et l’URL canonique de l’app
+- variables serveur uniquement pour la service role key, le cron secret et Resend
+- compatibilité legacy temporaire, mais marquée comme dépréciée avec warning explicite
+- échec explicite en production si une variable critique manque
 
-To learn more about Next.js, take a look at the following resources:
+### Variables actives
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variable | Rôle | Côté | Obligatoire | Valeur attendue | Fallback | Statut |
+| --- | --- | --- | --- | --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL publique du projet Supabase | client + serveur | oui | `https://<project-ref>.supabase.co` | aucun en prod | active |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | clé publique Supabase côté navigateur | client + serveur | oui | `sb_publishable_...` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` temporairement | active |
+| `SUPABASE_SERVICE_ROLE_KEY` | clé admin Supabase pour scraping, seeds et backend | serveur | oui pour admin/scraper | `sb_secret_...` | `SUPABASE_SERVICE_KEY` temporairement | active |
+| `NEXT_PUBLIC_SITE_URL` | URL canonique de l’application, callbacks auth et redirects | client + serveur | oui en prod | `https://<ton-domaine>` | `http://localhost:3000` en dev, `NEXT_PUBLIC_APP_URL` temporairement | active |
+| `CRON_SECRET` | secret exigé par `/api/scraper` | serveur | oui en prod | secret long aléatoire | aucun | active |
+| `SCRAPER_AUTO_SYNC_ENABLED` | active le worker auto-sync Node/local | serveur | non | `true` ou `false` | `true` | active |
+| `SCRAPER_BOOT_SYNC_ENABLED` | force un sync au démarrage du worker | serveur | non | `true` ou `false` | `true` | active |
+| `SCRAPER_BASE_URL` | URL cible appelée par le worker auto-sync | serveur | non mais recommandée en prod | `https://<ton-domaine>` | `NEXT_PUBLIC_SITE_URL` temporairement, `http://localhost:3000` en dev | active |
+| `SCRAPER_CRON_EXPRESSION` | fréquence du worker auto-sync | serveur | non | `*/5 * * * *` | `*/5 * * * *` | active |
+| `RESEND_API_KEY` | envoi d’emails d’alertes | serveur | non | clé Resend | aucun, l’email est simplement désactivé | active |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Variables legacy encore acceptées
 
-## Deploy on Vercel
+| Variable | Remplacée par | Usage actuel | Statut |
+| --- | --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | encore acceptée avec warning | deprecated |
+| `SUPABASE_SERVICE_KEY` | `SUPABASE_SERVICE_ROLE_KEY` | encore acceptée avec warning | deprecated |
+| `NEXT_PUBLIC_APP_URL` | `NEXT_PUBLIC_SITE_URL` | encore acceptée avec warning | deprecated |
+| `SCRAPER_INTERNAL_URL` | `SCRAPER_BASE_URL` | encore acceptée avec warning | deprecated |
+| `SCRAPER_SYNC_CRON` | `SCRAPER_CRON_EXPRESSION` | encore acceptée avec warning | deprecated |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## OAuth Google / Supabase
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Le flux OAuth fonctionne ainsi :
+1. Google redirige vers Supabase
+2. Supabase échange la session
+3. Supabase renvoie vers `/auth/callback` de MineAlert
+
+### URLs à configurer
+
+Google Cloud Console → `Authorized redirect URIs`
+
+```text
+https://<project-ref>.supabase.co/auth/v1/callback
+```
+
+Supabase Dashboard → `Authentication > URL Configuration`
+
+```text
+Site URL : https://<ton-domaine-vercel>.vercel.app
+Redirect URLs : https://<ton-domaine-vercel>.vercel.app/auth/callback
+```
+
+En prod, `NEXT_PUBLIC_SITE_URL` doit correspondre exactement à l’URL canonique publique de l’application.
+
+## Cron Vercel
+
+`vercel.json` déclenche `/api/scraper` toutes les 5 minutes.
+
+Pré-requis prod :
+1. définir `CRON_SECRET` dans Vercel
+2. déployer l’application avec `vercel.json`
+3. vérifier les exécutions dans `Vercel Dashboard > Cron Jobs / Functions`
+4. inspecter les logs JSON de `/api/scraper` et `scripts/auto_sync.mjs`
+
+La route `/api/scraper` accepte :
+- `Authorization: Bearer <CRON_SECRET>`
+- `X-Cron-Secret: <CRON_SECRET>`
+
+Si `CRON_SECRET` manque ou est vide, la route refuse toutes les requêtes.
+
+## Notes de production
+
+- Les clients Supabase admin et email sont marqués `server-only`
+- aucune clé serveur n’est injectée côté client
+- en production, l’absence de configuration critique provoque une erreur explicite
+- `RESEND_API_KEY` est optionnelle : si elle manque, l’envoi d’email est ignoré proprement
+
+## Étape optionnelle suivante
+
+Quand tous les environnements auront migré sur les nouvelles variables, on pourra supprimer définitivement les alias legacy :
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_KEY`
+- `NEXT_PUBLIC_APP_URL`
+- `SCRAPER_INTERNAL_URL`
+- `SCRAPER_SYNC_CRON`
