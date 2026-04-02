@@ -51,13 +51,26 @@ export default function DashboardPage(): JSX.Element {
   return (
     <div className="space-y-8">
       {systemStatus?.freshnessStatus === "stale" ? (
-        <Alert variant="error" title="Rafraichissement des donnees en retard">
-          Dernier sync visible {formatDataFreshnessLabel(
-            systemStatus.latestDataAgeMs,
-            systemStatus.freshnessStatus
-          )}
-          . Verifiez le scraper ou relancez un sync manuel.
-        </Alert>
+        systemStatus.syncStrategy === "scheduled_daily" ? (
+          <Alert variant="warning" title="Mise a jour quotidienne">
+            Dernier sync visible{" "}
+            {formatDataFreshnessLabel(
+              systemStatus.latestDataAgeMs,
+              systemStatus.freshnessStatus
+            )}
+            . En mode gratuit heberge, la synchronisation est planifiee{" "}
+            {systemStatus.expectedRefreshLabel}.
+          </Alert>
+        ) : (
+          <Alert variant="error" title="Rafraichissement des donnees en retard">
+            Dernier sync visible{" "}
+            {formatDataFreshnessLabel(
+              systemStatus.latestDataAgeMs,
+              systemStatus.freshnessStatus
+            )}
+            . Verifiez le scraper ou relancez un sync manuel.
+          </Alert>
+        )
       ) : null}
 
       {systemStatus?.freshnessStatus === "unavailable" ? (

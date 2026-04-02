@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
+import { getScraperRuntimeProfile } from "@/lib/config/server";
 import { ALERT_LIMITS, WATCHLIST_LIMITS } from "@/lib/utils/constants";
 import {
   buildDemoPriceHistory,
@@ -331,6 +332,9 @@ function filterNewsLocally(
 
 function buildDataFreshnessStatus(input: {
   mode: DataFreshnessStatus["mode"];
+  syncStrategy: DataFreshnessStatus["syncStrategy"];
+  expectedRefreshLabel: string;
+  expectedFreshnessWindowMs: number | null;
   latestPriceUpdateAt: string | null;
   latestNewsUpdateAt: string | null;
 }): DataFreshnessStatus {
@@ -342,6 +346,9 @@ function buildDataFreshnessStatus(input: {
   if (timestamps.length === 0) {
     return {
       mode: input.mode,
+      syncStrategy: input.syncStrategy,
+      expectedRefreshLabel: input.expectedRefreshLabel,
+      expectedFreshnessWindowMs: input.expectedFreshnessWindowMs,
       latestPriceUpdateAt: input.latestPriceUpdateAt,
       latestNewsUpdateAt: input.latestNewsUpdateAt,
       latestDataAt: null,
@@ -355,12 +362,16 @@ function buildDataFreshnessStatus(input: {
 
   return {
     mode: input.mode,
+    syncStrategy: input.syncStrategy,
+    expectedRefreshLabel: input.expectedRefreshLabel,
+    expectedFreshnessWindowMs: input.expectedFreshnessWindowMs,
     latestPriceUpdateAt: input.latestPriceUpdateAt,
     latestNewsUpdateAt: input.latestNewsUpdateAt,
     latestDataAt: new Date(latestTimestamp).toISOString(),
     latestDataAgeMs,
     freshnessStatus:
-      latestDataAgeMs <= DATA_FRESHNESS_WARNING_THRESHOLD_MS
+      input.expectedFreshnessWindowMs === null ||
+      latestDataAgeMs <= input.expectedFreshnessWindowMs
         ? "fresh"
         : "stale",
   };
@@ -890,14 +901,18 @@ export async function getDataFreshnessStatus(): Promise<DataFreshnessStatus> {
       return latest;
     }, null);
 
-    return buildDataFreshnessStatus({
-      mode: "demo",
-      latestPriceUpdateAt,
-      latestNewsUpdateAt,
-    });
-  }
+      return buildDataFreshnessStatus({
+        mode: "demo",
+        syncStrategy: "demo",
+        expectedRefreshLabel: "locale",
+        expectedFreshnessWindowMs: DATA_FRESHNESS_WARNING_THRESHOLD_MS,
+        latestPriceUpdateAt,
+        latestNewsUpdateAt,
+      });
+    }
 
   try {
+    const runtimeProfile = getScraperRuntimeProfile();
     const client = createSupabaseServerClient();
     const [latestMineralResult, latestNewsResult] = await Promise.all([
       client
@@ -930,12 +945,19 @@ export async function getDataFreshnessStatus(): Promise<DataFreshnessStatus> {
 
     return buildDataFreshnessStatus({
       mode: "live",
+      syncStrategy: runtimeProfile.syncStrategy,
+      expectedRefreshLabel: runtimeProfile.expectedRefreshLabel,
+      expectedFreshnessWindowMs: runtimeProfile.expectedFreshnessWindowMs,
       latestPriceUpdateAt,
       latestNewsUpdateAt,
     });
   } catch {
+    const runtimeProfile = getScraperRuntimeProfile();
     return {
       mode: "live",
+      syncStrategy: runtimeProfile.syncStrategy,
+      expectedRefreshLabel: runtimeProfile.expectedRefreshLabel,
+      expectedFreshnessWindowMs: runtimeProfile.expectedFreshnessWindowMs,
       latestPriceUpdateAt: null,
       latestNewsUpdateAt: null,
       latestDataAt: null,

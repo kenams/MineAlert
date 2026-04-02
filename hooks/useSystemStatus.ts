@@ -21,6 +21,9 @@ function extractSystemStatus(payload: SystemStatusApiPayload): DataFreshnessStat
     return (
       payload.data ?? {
         mode: "live",
+        syncStrategy: "manual",
+        expectedRefreshLabel: "manuelle",
+        expectedFreshnessWindowMs: null,
         latestPriceUpdateAt: null,
         latestNewsUpdateAt: null,
         latestDataAt: null,

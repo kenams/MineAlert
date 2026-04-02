@@ -1,6 +1,14 @@
 import "server-only";
 
+import { DATA_FRESHNESS_WARNING_THRESHOLD_MS } from "@/lib/utils/constants";
+
 const serverDeprecationWarnings = new Set<string>();
+
+export type ScraperRuntimeProfile = {
+  syncStrategy: "auto_worker" | "scheduled_daily" | "manual";
+  expectedRefreshLabel: string;
+  expectedFreshnessWindowMs: number | null;
+};
 
 function warnServerDeprecated(variableName: string, replacement: string): void {
   const warningKey = `${variableName}->${replacement}`;
@@ -128,4 +136,28 @@ export function getConfiguredScraperBaseUrl(): string | null {
   }
 
   return getConfiguredSiteUrl();
+}
+
+export function getScraperRuntimeProfile(): ScraperRuntimeProfile {
+  if (process.env.VERCEL === "1" && !isScraperAutoSyncEnabled()) {
+    return {
+      syncStrategy: "scheduled_daily",
+      expectedRefreshLabel: "quotidienne",
+      expectedFreshnessWindowMs: 30 * 60 * 60 * 1000,
+    };
+  }
+
+  if (isScraperAutoSyncEnabled()) {
+    return {
+      syncStrategy: "auto_worker",
+      expectedRefreshLabel: "frequente",
+      expectedFreshnessWindowMs: DATA_FRESHNESS_WARNING_THRESHOLD_MS,
+    };
+  }
+
+  return {
+    syncStrategy: "manual",
+    expectedRefreshLabel: "manuelle",
+    expectedFreshnessWindowMs: 24 * 60 * 60 * 1000,
+  };
 }

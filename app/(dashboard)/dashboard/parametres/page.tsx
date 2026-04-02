@@ -29,9 +29,6 @@ function MonitoringRow({
   );
 }
 
-/**
- * Page paramètres transformée en panneau de contrôle léger pour la bêta privée.
- */
 export default async function SettingsPage(): Promise<JSX.Element> {
   const freshness = await getDataFreshnessStatus();
   const freshnessLabel = formatDataFreshnessLabel(
@@ -50,22 +47,24 @@ export default async function SettingsPage(): Promise<JSX.Element> {
       <Card variant="elevated">
         <Card.Header>
           <div>
-            <p className="text-sm font-medium text-slate-500">Paramètres</p>
+            <p className="text-sm font-medium text-slate-500">Parametres</p>
             <h1 className="mt-1 text-2xl font-semibold text-[#0A0A0A]">
-              Santé de l'application
+              Sante de l'application
             </h1>
           </div>
           <Badge variant={freshnessVariant}>
             {freshness.freshnessStatus === "fresh"
-              ? "Données fraîches"
+              ? "Donnees a jour"
               : freshness.freshnessStatus === "stale"
-                ? "Scraper en retard"
-                : "Données indisponibles"}
+                ? "Rafraichissement en retard"
+                : "Donnees indisponibles"}
           </Badge>
         </Card.Header>
+
         <Card.Body className="space-y-4">
           <p className="text-sm leading-7 text-slate-600">
-            Ce panneau résume l'état du pipeline live, des services critiques et de la configuration runtime sans exposer de secret.
+            Ce panneau resume l'etat du pipeline live, des services critiques et
+            de la configuration runtime, sans exposer de secret.
           </p>
 
           <div className="grid gap-4 xl:grid-cols-2">
@@ -74,18 +73,22 @@ export default async function SettingsPage(): Promise<JSX.Element> {
                 <div>
                   <p className="text-sm font-medium text-slate-500">Pipeline live</p>
                   <h2 className="mt-1 text-lg font-semibold text-[#0A0A0A]">
-                    Scraper et fraîcheur
+                    Scraper et fraicheur
                   </h2>
                 </div>
               </Card.Header>
               <Card.Body className="space-y-3">
                 <MonitoringRow label="Statut global" value={freshnessLabel} />
                 <MonitoringRow
-                  label="Dernière donnée reçue"
+                  label="Cadence attendue"
+                  value={freshness.expectedRefreshLabel}
+                />
+                <MonitoringRow
+                  label="Derniere donnee recue"
                   value={
                     freshness.latestDataAt
                       ? formatDate(freshness.latestDataAt)
-                      : "Aucune donnée"
+                      : "Aucune donnee"
                   }
                 />
                 <MonitoringRow
@@ -97,16 +100,16 @@ export default async function SettingsPage(): Promise<JSX.Element> {
                   }
                 />
                 <MonitoringRow
-                  label="Dernière actualité"
+                  label="Derniere actualite"
                   value={
                     freshness.latestNewsUpdateAt
                       ? formatDate(freshness.latestNewsUpdateAt)
-                      : "Aucune actualité"
+                      : "Aucune actualite"
                   }
                 />
                 <MonitoringRow
-                  label="Mode de données"
-                  value={freshness.mode === "live" ? "Supabase live" : "Mode démo"}
+                  label="Mode de donnees"
+                  value={freshness.mode === "live" ? "Supabase live" : "Mode demo"}
                 />
               </Card.Body>
             </Card>
@@ -126,16 +129,16 @@ export default async function SettingsPage(): Promise<JSX.Element> {
                   value={process.env.NODE_ENV ?? "development"}
                 />
                 <MonitoringRow
-                  label="Déploiement"
+                  label="Deploiement"
                   value={process.env.VERCEL === "1" ? "Vercel" : "Node local"}
                 />
                 <MonitoringRow
                   label="Site URL"
-                  value={getConfiguredSiteUrl() ?? "Non configuré"}
+                  value={getConfiguredSiteUrl() ?? "Non configure"}
                 />
                 <MonitoringRow
                   label="Scraper base URL"
-                  value={getConfiguredScraperBaseUrl() ?? "Non configuré"}
+                  value={getConfiguredScraperBaseUrl() ?? "Non configure"}
                 />
                 <MonitoringRow
                   label="Expression cron"
@@ -158,11 +161,11 @@ export default async function SettingsPage(): Promise<JSX.Element> {
               <Card.Body className="space-y-3">
                 <MonitoringRow
                   label="CRON_SECRET"
-                  value={isCronSecretConfigured() ? "Configuré" : "Absent"}
+                  value={isCronSecretConfigured() ? "Configure" : "Absent"}
                 />
                 <MonitoringRow
                   label="Resend"
-                  value={isResendConfigured() ? "Configuré" : "Désactivé"}
+                  value={isResendConfigured() ? "Configure" : "Desactive"}
                 />
               </Card.Body>
             </Card>
@@ -179,11 +182,11 @@ export default async function SettingsPage(): Promise<JSX.Element> {
               <Card.Body className="space-y-3">
                 <MonitoringRow
                   label="Auto-sync"
-                  value={isScraperAutoSyncEnabled() ? "Activé" : "Désactivé"}
+                  value={isScraperAutoSyncEnabled() ? "Active" : "Desactive"}
                 />
                 <MonitoringRow
                   label="Boot sync"
-                  value={isScraperBootSyncEnabled() ? "Activé" : "Désactivé"}
+                  value={isScraperBootSyncEnabled() ? "Active" : "Desactive"}
                 />
               </Card.Body>
             </Card>
@@ -191,18 +194,21 @@ export default async function SettingsPage(): Promise<JSX.Element> {
             <Card variant="bordered" className="p-4">
               <Card.Header className="mb-3">
                 <div>
-                  <p className="text-sm font-medium text-slate-500">Opérations</p>
+                  <p className="text-sm font-medium text-slate-500">Operations</p>
                   <h2 className="mt-1 text-lg font-semibold text-[#0A0A0A]">
-                    Prochaine étape
+                    Lecture du statut
                   </h2>
                 </div>
               </Card.Header>
               <Card.Body className="space-y-3 text-sm leading-7 text-slate-600">
                 <p>
-                  Si le statut devient « scraper en retard », vérifiez les logs Vercel ou relancez un sync manuel via l'endpoint protégé.
+                  En mode gratuit heberge, un decalage de plusieurs heures peut
+                  rester normal si la synchronisation est quotidienne.
                 </p>
                 <p>
-                  Sur Vercel Hobby, le cron reste limité. Pour du vrai quasi temps réel, il faudra passer sur Pro ou déplacer l'orchestration.
+                  Si les donnees depassent nettement la cadence attendue,
+                  verifiez les logs Vercel ou relancez un sync manuel via
+                  l'endpoint protege.
                 </p>
               </Card.Body>
             </Card>

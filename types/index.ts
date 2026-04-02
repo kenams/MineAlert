@@ -154,6 +154,9 @@ export type PriceHistory = {
  */
 export type DataFreshnessStatus = {
   mode: "live" | "demo";
+  syncStrategy: "auto_worker" | "scheduled_daily" | "manual" | "demo";
+  expectedRefreshLabel: string;
+  expectedFreshnessWindowMs: number | null;
   latestPriceUpdateAt: string | null;
   latestNewsUpdateAt: string | null;
   latestDataAt: string | null;
