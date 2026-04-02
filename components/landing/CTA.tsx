@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
 /**
- * Bloc final d'appel à l'action pour pousser vers l'inscription.
+ * Bloc final d'appel a l'action pour pousser vers l'inscription.
  */
 export function CTA(): JSX.Element {
   return (
@@ -16,20 +16,24 @@ export function CTA(): JSX.Element {
               Commencer maintenant
             </p>
             <h2 className="mt-4 text-3xl font-semibold sm:text-4xl">
-              Passez de la veille artisanale à une lecture structurée du secteur minier.
+              Passez de la veille artisanale a une lecture structuree du secteur minier.
             </h2>
             <p className="mt-4 text-sm leading-7 text-white/72">
-              Testez MineAlert en mode démo ou branchez Supabase pour une version pleinement connectée.
+              Centralisez vos prix, actualites et alertes dans une interface unique, lisible et exploitable.
             </p>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link href="/register">
-              <Button size="lg">Créer un compte</Button>
+              <Button size="lg">Creer un compte</Button>
             </Link>
             <Link href="/login">
-              <Button variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10">
-                Accéder au dashboard
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-white/20 text-white hover:bg-white/10"
+              >
+                Acceder au dashboard
               </Button>
             </Link>
           </div>

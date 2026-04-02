@@ -92,7 +92,7 @@ export function GoogleAuthButton({
           : "Connexion Google indisponible pour le moment.";
 
       if (message.toLowerCase().includes("provider")) {
-        setError("Google n'est pas encore activé dans Supabase pour ce projet.");
+        setError("Google n'est pas encore active dans Supabase pour ce projet.");
       } else {
         setError(message);
       }

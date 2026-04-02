@@ -12,10 +12,10 @@ type SignOutButtonProps = Omit<ButtonProps, "onClick" | "children"> & {
 };
 
 /**
- * Déconnecte l'utilisateur courant quel que soit le mode actif.
+ * Deconnecte l'utilisateur courant quel que soit le mode actif.
  */
 export function SignOutButton({
-  label = "Se déconnecter",
+  label = "Se deconnecter",
   loading,
   ...props
 }: SignOutButtonProps): JSX.Element {

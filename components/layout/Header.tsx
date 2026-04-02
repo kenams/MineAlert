@@ -1,11 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ChangeEvent } from "react";
-import {
-  Bell,
-  Menu,
-  Search,
-} from "lucide-react";
+import { Bell, Menu, Search } from "lucide-react";
 
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { Badge } from "@/components/ui/Badge";
@@ -25,7 +21,7 @@ export type HeaderProps = {
 };
 
 /**
- * Construit un libellé de page lisible à partir du chemin courant si aucun titre n'est fourni.
+ * Construit un libelle de page lisible a partir du chemin courant si aucun titre n'est fourni.
  */
 export function getHeaderTitle(currentPath?: string): string {
   if (!currentPath || currentPath === "/" || currentPath === "/dashboard") {
@@ -59,7 +55,7 @@ function getUserInitials(userName: string | undefined): string {
 }
 
 /**
- * Barre supérieure du dashboard avec recherche, notifications et zone compte.
+ * Barre superieure du dashboard avec recherche, notifications et zone compte.
  */
 export function Header({
   title,
@@ -118,7 +114,7 @@ export function Header({
                     : "text-slate-500"
               )}
             >
-              Dernière mise à jour : {lastUpdated}
+              Derniere mise a jour : {lastUpdated}
             </p>
           ) : null}
         </div>
@@ -127,7 +123,7 @@ export function Header({
           <Input
             value={searchValue}
             onChange={handleSearchChange}
-            placeholder="Rechercher un minerai, une actualité ou un pays..."
+            placeholder="Rechercher un minerai, une actualite ou un pays..."
             leftIcon={<Search className="h-4 w-4" />}
             wrapperClassName="max-w-xl"
           />
@@ -168,7 +164,7 @@ export function Header({
             variant="outline"
             size="sm"
             className="hidden rounded-xl md:inline-flex"
-            label="Déconnexion"
+            label="Deconnexion"
           />
         </div>
       </div>

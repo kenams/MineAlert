@@ -19,7 +19,7 @@ type LoginFormProps = {
 };
 
 /**
- * Formulaire de connexion client, alimenté par les query params de la page serveur.
+ * Formulaire de connexion client, alimente par les query params de la page serveur.
  */
 export function LoginForm({
   callbackError,
@@ -34,7 +34,7 @@ export function LoginForm({
   const [info, setInfo] = useState<string | null>(
     supabaseEnabled
       ? null
-      : "Mode demo disponible si Supabase n'est pas configure."
+      : "Mode local de secours actif tant que Supabase n'est pas configure."
   );
   const [loading, setLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -70,9 +70,9 @@ export function LoginForm({
         if (email.trim() && password.trim().length >= 4) {
           localStorage.setItem(
             "minealert-demo-user",
-            JSON.stringify({ email, fullName: "Investisseur Demo" })
+            JSON.stringify({ email, fullName: "Utilisateur local" })
           );
-          setInfo("Connexion effectuee en mode demo.");
+          setInfo("Connexion effectuee en mode local.");
           router.push("/dashboard");
           return;
         }

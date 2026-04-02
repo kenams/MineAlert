@@ -24,7 +24,7 @@ import {
 } from "@/lib/utils/formatters";
 
 /**
- * Dashboard principal MineAlert avec synthèse, watchlist, actualités et alertes.
+ * Dashboard principal MineAlert avec synthese, watchlist, actualites et alertes.
  */
 export default function DashboardPage(): JSX.Element {
   const [selectedSymbol, setSelectedSymbol] = useState<string>(
@@ -82,7 +82,7 @@ export default function DashboardPage(): JSX.Element {
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Prix Or"
-          value={gold ? formatPrice(gold.currentPrice, gold.currency) : "—"}
+          value={gold ? formatPrice(gold.currentPrice, gold.currency) : "-"}
           change={gold ? formatPrice(gold.priceChange24h, gold.currency) : undefined}
           changePercent={gold ? formatChange(gold.priceChangePercent24h) : undefined}
           trend={gold && gold.priceChangePercent24h >= 0 ? "up" : "down"}
@@ -90,7 +90,7 @@ export default function DashboardPage(): JSX.Element {
         />
         <StatCard
           title="Prix Cuivre"
-          value={copper ? formatPrice(copper.currentPrice, copper.currency) : "—"}
+          value={copper ? formatPrice(copper.currentPrice, copper.currency) : "-"}
           change={copper ? formatPrice(copper.priceChange24h, copper.currency) : undefined}
           changePercent={
             copper ? formatChange(copper.priceChangePercent24h) : undefined
@@ -118,10 +118,10 @@ export default function DashboardPage(): JSX.Element {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold text-[#0A0A0A]">Ma watchlist</h2>
-            <p className="text-sm text-slate-500">Les minerais que vous suivez de près.</p>
+            <p className="text-sm text-slate-500">Les minerais que vous suivez de pres.</p>
           </div>
           <Link href="/dashboard/minerais">
-            <Button variant="outline">Gérer ma watchlist</Button>
+            <Button variant="outline">Gerer ma watchlist</Button>
           </Link>
         </div>
 
@@ -166,10 +166,10 @@ export default function DashboardPage(): JSX.Element {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-2xl font-semibold text-[#0A0A0A]">
-                Actualités récentes
+                Actualites recentes
               </h2>
               <p className="text-sm text-slate-500">
-                Les derniers signaux marché et mines.
+                Les derniers signaux marche et mines.
               </p>
             </div>
             <Link href="/dashboard/actualites">
@@ -215,16 +215,16 @@ export default function DashboardPage(): JSX.Element {
       <section className="space-y-4">
         <div>
           <h2 className="text-2xl font-semibold text-[#0A0A0A]">
-            Alertes récentes
+            Alertes recentes
           </h2>
           <p className="text-sm text-slate-500">
-            Vos dernières alertes actives et déclenchées.
+            Vos dernieres alertes actives et declenchees.
           </p>
         </div>
 
         {alerts.length === 0 ? (
           <Alert variant="info" title="Aucune alerte active">
-            Créez votre première alerte pour être notifié d'un seuil de prix important.
+            Creez votre premiere alerte pour etre notifie d'un seuil de prix important.
           </Alert>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
