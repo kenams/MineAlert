@@ -13,9 +13,7 @@ type MineralDetail = {
   history: PriceHistory[];
 };
 
-type MineralDetailPayload =
-  | MineralDetail
-  | ApiResponse<MineralDetail>;
+type MineralDetailPayload = MineralDetail | ApiResponse<MineralDetail>;
 
 type WatchlistPayload =
   | Mineral[]
@@ -43,9 +41,9 @@ const MOCK_WATCHLIST: Mineral[] = [
     monthLow: 1886,
     currency: "USD",
     lastUpdated: new Date().toISOString(),
-    description: "Métal précieux refuge mondial.",
+    description: "Metal precieux refuge mondial.",
     mainProducers: ["Chine", "Australie", "Russie"],
-    useCases: ["Investissement", "Bijoux", "Électronique"],
+    useCases: ["Investissement", "Bijoux", "Electronique"],
   },
   {
     id: "mineral-cu",
@@ -62,9 +60,9 @@ const MOCK_WATCHLIST: Mineral[] = [
     monthLow: 3.68,
     currency: "USD",
     lastUpdated: new Date().toISOString(),
-    description: "Métal de base essentiel à l'électrification.",
-    mainProducers: ["Chili", "Pérou", "Congo"],
-    useCases: ["Câbles", "Construction", "Véhicules électriques"],
+    description: "Metal de base essentiel a l'electrification.",
+    mainProducers: ["Chili", "Perou", "Congo"],
+    useCases: ["Cables", "Construction", "Vehicules electriques"],
   },
   {
     id: "mineral-li",
@@ -81,9 +79,9 @@ const MOCK_WATCHLIST: Mineral[] = [
     monthLow: 20800,
     currency: "USD",
     lastUpdated: new Date().toISOString(),
-    description: "Métal phare de la transition énergétique.",
+    description: "Metal phare de la transition energetique.",
     mainProducers: ["Australie", "Chili", "Argentine"],
-    useCases: ["Batteries", "Céramique", "Lubrifiants"],
+    useCases: ["Batteries", "Ceramique", "Lubrifiants"],
   },
 ];
 
@@ -144,14 +142,20 @@ function extractWatchlist(payload: WatchlistPayload): Mineral[] {
 }
 
 function buildMockMineralDetail(id: string): MineralDetail {
-  const mineral = MOCK_WATCHLIST.find((entry) => entry.id === id) ?? MOCK_WATCHLIST[0];
+  const mineral =
+    MOCK_WATCHLIST.find((entry) => entry.id === id) ?? MOCK_WATCHLIST[0];
 
   return {
     mineral,
     history: MOCK_HISTORY.map((entry) => ({
       ...entry,
       mineralId: mineral.id,
-      price: Number((mineral.currentPrice * 0.96 + Math.random() * mineral.currentPrice * 0.03).toFixed(2)),
+      price: Number(
+        (
+          mineral.currentPrice * 0.96 +
+          Math.random() * mineral.currentPrice * 0.03
+        ).toFixed(2)
+      ),
     })),
   };
 }
@@ -164,12 +168,16 @@ async function fetchMineralDetail(id: string): Promise<MineralDetail> {
     });
 
     if (!response.ok) {
-      throw new Error("Impossible de charger le détail du minerai.");
+      throw new Error("Impossible de charger le detail du minerai.");
     }
 
     const payload = (await response.json()) as MineralDetailPayload;
     return extractMineralDetail(payload);
   } catch {
+    if (isSupabaseConfigured()) {
+      return { mineral: null, history: [] };
+    }
+
     return buildMockMineralDetail(id);
   }
 }
@@ -208,7 +216,7 @@ async function addToWatchlist(input: WatchlistMutationInput): Promise<void> {
 
   if (!response.ok) {
     throw new Error(
-      "Impossible d'ajouter ce minerai à la watchlist. Vérifiez que l'API /api/watchlist est disponible."
+      "Impossible d'ajouter ce minerai a la watchlist. Verifiez que l'API /api/watchlist est disponible."
     );
   }
 }
@@ -225,14 +233,11 @@ async function removeFromWatchlist(input: WatchlistMutationInput): Promise<void>
 
   if (!response.ok) {
     throw new Error(
-      "Impossible de retirer ce minerai de la watchlist. Vérifiez que l'API /api/watchlist est disponible."
+      "Impossible de retirer ce minerai de la watchlist. Verifiez que l'API /api/watchlist est disponible."
     );
   }
 }
 
-/**
- * Récupère le détail d'un minerai et son historique de prix, avec fallback mock.
- */
 export function useMineral(id: string) {
   const query = useQuery({
     queryKey: ["mineral", id],
@@ -251,9 +256,6 @@ export function useMineral(id: string) {
   };
 }
 
-/**
- * Récupère la watchlist utilisateur et expose les mutations d'ajout et de suppression.
- */
 export function useWatchlist() {
   const queryClient = useQueryClient();
 

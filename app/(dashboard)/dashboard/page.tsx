@@ -58,7 +58,7 @@ export default function DashboardPage(): JSX.Element {
               systemStatus.latestDataAgeMs,
               systemStatus.freshnessStatus
             )}
-            . En mode gratuit heberge, la synchronisation est planifiee{" "}
+            . En mode gratuit heberge, la synchronisation passe par une cadence{" "}
             {systemStatus.expectedRefreshLabel}.
           </Alert>
         ) : (

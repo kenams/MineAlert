@@ -142,7 +142,7 @@ export function getScraperRuntimeProfile(): ScraperRuntimeProfile {
   if (process.env.VERCEL === "1" && !isScraperAutoSyncEnabled()) {
     return {
       syncStrategy: "scheduled_daily",
-      expectedRefreshLabel: "quotidienne",
+      expectedRefreshLabel: "quotidienne + a la demande",
       expectedFreshnessWindowMs: 30 * 60 * 60 * 1000,
     };
   }

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   DEFAULT_CURRENCY,
   DEFAULT_PRICE_HISTORY_PERIOD,
@@ -33,9 +34,9 @@ const MOCK_PRICES: Mineral[] = [
     monthLow: 1886,
     currency: DEFAULT_CURRENCY,
     lastUpdated: new Date().toISOString(),
-    description: "Métal précieux refuge mondial.",
+    description: "Metal precieux refuge mondial.",
     mainProducers: ["Chine", "Australie", "Russie"],
-    useCases: ["Investissement", "Bijoux", "Électronique"],
+    useCases: ["Investissement", "Bijoux", "Electronique"],
   },
   {
     id: "mineral-cu",
@@ -52,9 +53,9 @@ const MOCK_PRICES: Mineral[] = [
     monthLow: 3.68,
     currency: DEFAULT_CURRENCY,
     lastUpdated: new Date().toISOString(),
-    description: "Métal de base essentiel à l'électrification.",
-    mainProducers: ["Chili", "Pérou", "Congo"],
-    useCases: ["Câbles", "Construction", "Véhicules électriques"],
+    description: "Metal de base essentiel a l'electrification.",
+    mainProducers: ["Chili", "Perou", "Congo"],
+    useCases: ["Cables", "Construction", "Vehicules electriques"],
   },
   {
     id: "mineral-li",
@@ -71,9 +72,9 @@ const MOCK_PRICES: Mineral[] = [
     monthLow: 20800,
     currency: DEFAULT_CURRENCY,
     lastUpdated: new Date().toISOString(),
-    description: "Métal phare de la transition énergétique.",
+    description: "Metal phare de la transition energetique.",
     mainProducers: ["Australie", "Chili", "Argentine"],
-    useCases: ["Batteries", "Céramique", "Lubrifiants"],
+    useCases: ["Batteries", "Ceramique", "Lubrifiants"],
   },
 ];
 
@@ -87,7 +88,8 @@ function isApiResponse<T>(payload: unknown): payload is ApiResponse<T> {
 }
 
 function createMockPriceHistory(symbol: string, period: string): PriceHistory[] {
-  const mineral = MOCK_PRICES.find((entry) => entry.symbol === symbol) ?? MOCK_PRICES[0];
+  const mineral =
+    MOCK_PRICES.find((entry) => entry.symbol === symbol) ?? MOCK_PRICES[0];
   const points =
     period === "7d" ? 7 : period === "90d" ? 12 : period === "1y" ? 12 : 10;
 
@@ -163,6 +165,10 @@ async function fetchPrices(category?: string): Promise<Mineral[]> {
       ? prices.filter((item) => item.category === category)
       : prices;
   } catch {
+    if (isSupabaseConfigured()) {
+      return [];
+    }
+
     return category
       ? MOCK_PRICES.filter((item) => item.category === category)
       : MOCK_PRICES;
@@ -189,13 +195,14 @@ async function fetchPriceHistory(
     const payload = (await response.json()) as PriceHistoryApiPayload;
     return extractHistory(payload);
   } catch {
+    if (isSupabaseConfigured()) {
+      return [];
+    }
+
     return createMockPriceHistory(symbol, period);
   }
 }
 
-/**
- * Récupère la liste des prix actuels des minerais, avec rafraîchissement périodique et fallback mock.
- */
 export function usePrices(category?: string) {
   const query = useQuery({
     queryKey: ["prices", category],
@@ -213,9 +220,6 @@ export function usePrices(category?: string) {
   };
 }
 
-/**
- * Récupère l'historique de prix d'un symbole donné sur une période choisie.
- */
 export function usePriceHistory(
   symbol: string,
   period: string = DEFAULT_PRICE_HISTORY_PERIOD

@@ -15,6 +15,7 @@ import {
 import {
   requireAuthenticatedUser,
 } from "@/lib/server/auth";
+import { maybeRunOnDemandSync } from "@/lib/server/on-demand-sync";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
 import { DATA_FRESHNESS_WARNING_THRESHOLD_MS } from "@/lib/utils/constants";
@@ -428,6 +429,8 @@ export async function getMinerals(options?: {
   }
 
   try {
+    await maybeRunOnDemandSync();
+
     const client = createSupabaseServerClient();
     let query = client.from("minerals").select("*").eq("is_active", true);
 
@@ -442,12 +445,12 @@ export async function getMinerals(options?: {
     const { data, error } = await query.order("name", { ascending: true });
 
     if (error || !data) {
-      return DEMO_MINERALS;
+      return [];
     }
 
     return (data as MineralRow[]).map(mapMineralRow);
   } catch {
-    return DEMO_MINERALS;
+    return [];
   }
 }
 
@@ -470,6 +473,8 @@ export async function getMineralByIdOrSymbol(
   }
 
   try {
+    await maybeRunOnDemandSync();
+
     const client = createSupabaseServerClient();
     const byId = await client
       .from("minerals")
@@ -505,6 +510,10 @@ export async function getPriceHistoryForMineral(
   idOrSymbol: string,
   period = "30d"
 ): Promise<PriceHistory[]> {
+  if (isSupabaseConfigured()) {
+    await maybeRunOnDemandSync();
+  }
+
   const mineral = await getMineralByIdOrSymbol(idOrSymbol);
 
   if (!mineral) {
@@ -529,7 +538,7 @@ export async function getPriceHistoryForMineral(
       .order("recorded_at", { ascending: true });
 
     if (error || !data || data.length === 0) {
-      return buildDemoPriceHistory(mineral, period === "7d" ? 7 : 30);
+      return [];
     }
 
     return (data as PriceHistoryRow[]).map((row) => ({
@@ -540,7 +549,7 @@ export async function getPriceHistoryForMineral(
       source: row.source ?? "supabase",
     }));
   } catch {
-    return buildDemoPriceHistory(mineral, period === "7d" ? 7 : 30);
+    return [];
   }
 }
 
@@ -579,6 +588,8 @@ export async function getNewsArticles(options?: {
   }
 
   try {
+    await maybeRunOnDemandSync();
+
     const client = createSupabaseServerClient();
     let query = client.from("news_articles").select("*", { count: "exact" });
 
@@ -607,9 +618,9 @@ export async function getNewsArticles(options?: {
 
     if (error || !data) {
       return {
-        articles: DEMO_NEWS.slice(0, pageSize),
-        total: DEMO_NEWS.length,
-        page: 1,
+        articles: [],
+        total: 0,
+        page,
         totalPages: 1,
       };
     }
@@ -625,9 +636,9 @@ export async function getNewsArticles(options?: {
     };
   } catch {
     return {
-      articles: DEMO_NEWS.slice(0, pageSize),
-      total: DEMO_NEWS.length,
-      page: 1,
+      articles: [],
+      total: 0,
+      page,
       totalPages: 1,
     };
   }
@@ -861,12 +872,12 @@ export async function getMines(): Promise<Mine[]> {
     const { data, error } = await client.from("mines").select("*");
 
     if (error || !data) {
-      return DEMO_MINES;
+      return [];
     }
 
     return (data as MineRow[]).map(mapMineRow);
   } catch {
-    return DEMO_MINES;
+    return [];
   }
 }
 
@@ -912,6 +923,8 @@ export async function getDataFreshnessStatus(): Promise<DataFreshnessStatus> {
     }
 
   try {
+    await maybeRunOnDemandSync();
+
     const runtimeProfile = getScraperRuntimeProfile();
     const client = createSupabaseServerClient();
     const [latestMineralResult, latestNewsResult] = await Promise.all([

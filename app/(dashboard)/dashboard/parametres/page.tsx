@@ -109,7 +109,7 @@ export default async function SettingsPage(): Promise<JSX.Element> {
                 />
                 <MonitoringRow
                   label="Mode de donnees"
-                  value={freshness.mode === "live" ? "Supabase live" : "Mode demo"}
+                  value={freshness.mode === "live" ? "Supabase live" : "Mode local"}
                 />
               </Card.Body>
             </Card>
@@ -202,8 +202,9 @@ export default async function SettingsPage(): Promise<JSX.Element> {
               </Card.Header>
               <Card.Body className="space-y-3 text-sm leading-7 text-slate-600">
                 <p>
-                  En mode gratuit heberge, un decalage de plusieurs heures peut
-                  rester normal si la synchronisation est quotidienne.
+                  En mode gratuit heberge, Vercel lance la cadence planifiee
+                  une fois par jour. L'application tente aussi un refresh au
+                  chargement si les donnees sont trop anciennes.
                 </p>
                 <p>
                   Si les donnees depassent nettement la cadence attendue,

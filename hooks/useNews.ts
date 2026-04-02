@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   LIVE_NEWS_REFRESH_MS,
   NEWS_PAGE_SIZE,
@@ -21,11 +22,11 @@ type NewsApiPayload =
 const MOCK_ARTICLES: NewsArticle[] = [
   {
     id: "news-1",
-    title: "Le cuivre soutenu par une demande industrielle plus résiliente",
+    title: "Le cuivre soutenu par une demande industrielle plus resiliente",
     summary:
-      "Les opérateurs surveillent un rebond de la demande lié aux infrastructures et aux réseaux électriques.",
+      "Les operateurs surveillent un rebond de la demande lie aux infrastructures et aux reseaux electriques.",
     content:
-      "Le marché du cuivre retrouve un peu d'élan avec une meilleure tenue des achats industriels en Asie.",
+      "Le marche du cuivre retrouve un peu d'elan avec une meilleure tenue des achats industriels en Asie.",
     url: "https://example.com/cuivre-demande",
     source: "Reuters",
     sourceUrl: "https://www.reuters.com",
@@ -39,9 +40,9 @@ const MOCK_ARTICLES: NewsArticle[] = [
   },
   {
     id: "news-2",
-    title: "Le lithium reste sous pression malgré les attentes sur les batteries",
+    title: "Le lithium reste sous pression malgre les attentes sur les batteries",
     summary:
-      "Les prix restent volatils alors que les capacités de production continuent d'augmenter.",
+      "Les prix restent volatils alors que les capacites de production continuent d'augmenter.",
     content:
       "Les investisseurs surveillent les annonces de nouveaux projets et la vitesse de reprise de la demande.",
     url: "https://example.com/lithium-volatilite",
@@ -59,16 +60,16 @@ const MOCK_ARTICLES: NewsArticle[] = [
     id: "news-3",
     title: "L'or profite d'un regain d'aversion au risque",
     summary:
-      "Le métal jaune attire à nouveau les flux défensifs dans un contexte de marché plus nerveux.",
+      "Le metal jaune attire a nouveau les flux defensifs dans un contexte de marche plus nerveux.",
     content:
-      "Les tensions géopolitiques redonnent de la visibilité à l'or comme actif de protection.",
+      "Les tensions geopolitiques redonnent de la visibilite a l'or comme actif de protection.",
     url: "https://example.com/or-refuge",
     source: "Kitco",
     sourceUrl: "https://www.kitco.com",
     publishedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
     scrapedAt: new Date().toISOString(),
     minerals: ["or"],
-    countries: ["États-Unis"],
+    countries: ["Etats-Unis"],
     sentiment: "positive",
     relevanceScore: 88,
     isBreaking: true,
@@ -184,7 +185,10 @@ function normalizeNewsResult(
 function buildMockNewsResult(filters?: NewsFilters): NewsResult {
   const filteredArticles = applyNewsFilters(MOCK_ARTICLES, filters);
   const currentPage = filters?.page ?? 1;
-  const totalPages = Math.max(1, Math.ceil(filteredArticles.length / NEWS_PAGE_SIZE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredArticles.length / NEWS_PAGE_SIZE)
+  );
   const startIndex = (currentPage - 1) * NEWS_PAGE_SIZE;
 
   return {
@@ -203,19 +207,25 @@ async function fetchNews(filters?: NewsFilters): Promise<NewsResult> {
     });
 
     if (!response.ok) {
-      throw new Error("Impossible de charger les actualités.");
+      throw new Error("Impossible de charger les actualites.");
     }
 
     const payload = (await response.json()) as NewsApiPayload;
     return normalizeNewsResult(payload, filters);
   } catch {
+    if (isSupabaseConfigured()) {
+      return {
+        articles: [],
+        total: 0,
+        page: filters?.page ?? 1,
+        totalPages: 1,
+      };
+    }
+
     return buildMockNewsResult(filters);
   }
 }
 
-/**
- * Récupère le flux d'actualités minières avec filtres, pagination et fallback mock.
- */
 export function useNews(filters?: NewsFilters) {
   const query = useQuery({
     queryKey: ["news", filters],
