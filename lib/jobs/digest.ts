@@ -28,7 +28,7 @@ export async function runDailyDigest(): Promise<{ recipients: number; sent: numb
   }
 
   const [{ data: minerals }, { data: filings }, { data: news }] = await Promise.all([
-    client.from("minerals").select("id,name,current_price,unit").eq("is_active", true).order("name"),
+    client.from("minerals").select("id,name,current_price,unit,last_updated").eq("is_active", true).order("name"),
     client
       .from("regulatory_filings")
       .select("title_fr,url,category")
@@ -46,8 +46,9 @@ export async function runDailyDigest(): Promise<{ recipients: number; sent: numb
 
   const priceLines: string[] = [];
 
-  for (const mineral of (minerals ?? []) as Array<{ id: string; name: string; current_price: number | null; unit: string }>) {
+  for (const mineral of (minerals ?? []) as Array<{ id: string; name: string; current_price: number | null; unit: string; last_updated: string | null }>) {
     if (typeof mineral.current_price !== "number" || mineral.current_price <= 0) continue;
+    if (!mineral.last_updated || Date.now() - Date.parse(mineral.last_updated) > 48 * 60 * 60 * 1000) continue;
     const change = await computeChangePercent(client, mineral.id, mineral.current_price);
     const suffix = change === null ? "" : ` (${change > 0 ? "+" : ""}${change.toFixed(1).replace(".", ",")} % en 24 h)`;
     priceLines.push(`${mineral.name} : ${fmt(mineral.current_price)} USD/${mineral.unit}${suffix}`);

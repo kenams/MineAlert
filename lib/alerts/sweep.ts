@@ -21,7 +21,9 @@ type AlertRow = {
   created_at: string;
 };
 
-type MineralRow = { id: string; name: string; symbol: string; current_price: number | null };
+const MAX_PRICE_AGE_MS = 48 * 60 * 60 * 1000;
+
+type MineralRow = { id: string; name: string; symbol: string; current_price: number | null; last_updated: string | null };
 
 type EventDraft = { user_id: string; alert_id: string; title: string; body: string; url: string | null };
 
@@ -71,7 +73,7 @@ export async function runAlertSweep(): Promise<{ checked: number; events: number
   }
 
   const alerts = alertData as AlertRow[];
-  const { data: mineralData } = await client.from("minerals").select("id,name,symbol,current_price");
+  const { data: mineralData } = await client.from("minerals").select("id,name,symbol,current_price,last_updated");
   const minerals = new Map(((mineralData ?? []) as MineralRow[]).map((mineral) => [mineral.id, mineral]));
   const drafts: EventDraft[] = [];
   const triggeredIds = new Set<string>();
@@ -133,6 +135,11 @@ export async function runAlertSweep(): Promise<{ checked: number; events: number
     }
 
     if (!mineral || typeof mineral.current_price !== "number" || mineral.current_price <= 0) {
+      continue;
+    }
+
+    // Pas d'alerte sur un cours qui n'est plus mis à jour (minerais sans source en direct).
+    if (!mineral.last_updated || now - Date.parse(mineral.last_updated) > MAX_PRICE_AGE_MS) {
       continue;
     }
 
