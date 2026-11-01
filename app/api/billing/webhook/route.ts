@@ -90,28 +90,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
 
       const reference = asString(object.client_reference_id);
-      const email = asString((object.customer_details as { email?: unknown } | undefined)?.email)?.toLowerCase() ?? null;
-      let userId = reference && UUID_PATTERN.test(reference) ? reference : null;
+      const subscriptionId = asString(object.subscription);
+      const customerId = asString(object.customer);
 
-      if (!userId && email) {
-        const { data } = await client.from("users").select("id").ilike("email", email).limit(1).maybeSingle();
-        userId = (data?.id as string | undefined) ?? null;
+      if (!reference || !UUID_PATTERN.test(reference) || !subscriptionId || !customerId) {
+        console.warn(JSON.stringify({ source: "stripe-webhook", status: "missing_reference", event: event.id }));
+        return NextResponse.json({ error: "Référence utilisateur manquante." }, { status: 500 });
       }
 
-      if (!userId) {
+      const { data: user } = await client
+        .from("users")
+        .select("id,plan,stripe_subscription_id")
+        .eq("id", reference)
+        .maybeSingle();
+
+      if (!user) {
         console.warn(JSON.stringify({ source: "stripe-webhook", status: "user_not_found", event: event.id }));
         return NextResponse.json({ error: "Utilisateur introuvable." }, { status: 500 });
+      }
+
+      // Ne jamais écraser l'abonnement d'un compte déjà Pro avec un autre abonnement : à traiter à la main.
+      if (user.stripe_subscription_id && user.stripe_subscription_id !== subscriptionId && user.plan === "pro") {
+        console.warn(JSON.stringify({ source: "stripe-webhook", status: "already_subscribed", event: event.id }));
+        return NextResponse.json({ received: true, ignored: true });
       }
 
       const { error } = await client
         .from("users")
         .update({
           plan: "pro",
-          stripe_customer_id: asString(object.customer),
-          stripe_subscription_id: asString(object.subscription),
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscriptionId,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", userId);
+        .eq("id", user.id);
 
       if (error) {
         throw new Error(error.message);
@@ -135,10 +147,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ received: true, ignored: true });
       }
 
-      const { error } = await client
+      const customerId = asString(object.customer);
+      let update = client
         .from("users")
         .update({ plan: active ? "pro" : "free", updated_at: new Date().toISOString() })
         .eq("stripe_subscription_id", subscriptionId);
+
+      if (customerId) {
+        update = update.eq("stripe_customer_id", customerId);
+      }
+
+      const { error } = await update;
 
       if (error) {
         throw new Error(error.message);

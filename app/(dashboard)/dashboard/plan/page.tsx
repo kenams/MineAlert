@@ -4,6 +4,7 @@ import { formatPlanName } from "@/lib/utils/formatters";
 
 const PRO_MONTHLY = "https://buy.stripe.com/4gMcN5fFr8oafI5e4W1oI03";
 const PRO_ANNUAL = "https://buy.stripe.com/7sYfZh1OB1ZM8fD4um1oI04";
+const PORTAL_URL = "https://billing.stripe.com/p/login/eVq00jfFr0VI8fD8KC1oI00";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function checkoutUrl(base: string, userId: string, email: string): string {
@@ -72,12 +73,14 @@ export default async function PlanPage({ searchParams }: PageProps): Promise<JSX
             {isPro ? (
               <div className="w-full space-y-2 text-sm text-slate-600">
                 <p className="font-medium text-emerald-700">Plan Pro actif.</p>
-                <p>
-                  Pour résilier ou changer de carte, écrivez à{" "}
-                  <a className="underline" href="mailto:kahdigital42@gmail.com?subject=MineAlert%20Pro">
-                    kahdigital42@gmail.com
-                  </a>
-                  . La résiliation prend effet immédiatement.
+                <a
+                  href={`${PORTAL_URL}?${new URLSearchParams({ prefilled_email: profile.email }).toString()}`}
+                  className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 px-5 font-medium text-[#0A0A0A] hover:bg-white"
+                >
+                  Gérer mon abonnement
+                </a>
+                <p className="text-xs text-slate-500">
+                  Résiliation en un clic, changement de carte et factures. Vous recevez un lien de connexion par e-mail.
                 </p>
               </div>
             ) : canCheckout ? (
