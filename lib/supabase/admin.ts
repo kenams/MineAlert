@@ -23,5 +23,10 @@ export function createAdminClient(): SupabaseClient {
       autoRefreshToken: false,
       persistSession: false,
     },
+    global: {
+      // Next.js met en cache les fetch GET identiques : une liste d'alertes ou de cours lue une fois resterait figée.
+      // Les tâches de fond doivent toujours lire les données du moment.
+      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+    },
   });
 }

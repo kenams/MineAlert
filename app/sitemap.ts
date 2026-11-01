@@ -7,6 +7,10 @@ const PUBLIC_PATHS: ReadonlyArray<{ path: string; priority: number }> = [
   { path: "/", priority: 1 },
   { path: "/login", priority: 0.4 },
   { path: "/register", priority: 0.6 },
+  { path: "/legal", priority: 0.2 },
+  { path: "/privacy", priority: 0.2 },
+  { path: "/terms", priority: 0.3 },
+  { path: "/contact", priority: 0.3 },
 ];
 
 /**
