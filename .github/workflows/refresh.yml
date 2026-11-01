@@ -1,0 +1,20 @@
+name: Refresh market data
+
+# La page d'accueil lit les cours via getMinerals(), qui déclenche la synchronisation
+# quand les données ont plus de 15 minutes. Cet appel régulier la garde à jour sans visiteur.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Wake the landing page (ISR + on-demand sync)
+        run: curl -fsS --max-time 60 https://mine-alert-kenams.vercel.app/ -o /dev/null
+      - name: Check freshness
+        run: |
+          curl -fsS --max-time 30 https://mine-alert-kenams.vercel.app/api/system/status | tee status.json
+          grep -q '"freshnessStatus":"unavailable"' status.json && echo "::warning::no market data yet" || true

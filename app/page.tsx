@@ -4,6 +4,8 @@ import { Hero } from "@/components/landing/Hero";
 import { Pricing } from "@/components/landing/Pricing";
 import { Footer } from "@/components/layout/Footer";
 
+export const revalidate = 900;
+
 /**
  * Landing publique MineAlert.
  */
