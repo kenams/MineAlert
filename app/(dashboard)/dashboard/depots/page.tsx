@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { safeHref } from "@/lib/utils/safe-html";
 
 export const dynamic = "force-dynamic";
 
@@ -117,7 +118,7 @@ export default async function FilingsPage({ searchParams }: PageProps): Promise<
                   </div>
                   <p className="mt-2 text-sm font-medium text-[#0A0A0A]">{filing.title_fr}</p>
                   <Link
-                    href={filing.url}
+                    href={safeHref(filing.url) ?? "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 inline-block text-sm text-[#1B4332] underline"

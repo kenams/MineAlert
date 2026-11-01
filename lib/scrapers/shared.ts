@@ -119,7 +119,8 @@ export function toSafeIsoDate(value?: string | null): string {
  */
 export function toSafeUrl(value: string, baseUrl?: string): string {
   try {
-    return new URL(value, baseUrl).toString();
+    const parsed = new URL(value, baseUrl);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.toString() : "";
   } catch {
     return "";
   }

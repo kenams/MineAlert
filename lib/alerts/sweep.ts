@@ -2,6 +2,7 @@ import "server-only";
 
 import { sendMail } from "@/lib/email/sender";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { esc, safeHref } from "@/lib/utils/safe-html";
 
 const PRICE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_KEYWORD_HITS_PER_ALERT = 3;
@@ -201,8 +202,10 @@ export async function runAlertSweep(): Promise<{ checked: number; events: number
 <h2 style="color:#1B4332">MineAlert : ${mine.length} alerte${mine.length > 1 ? "s" : ""} déclenchée${mine.length > 1 ? "s" : ""}</h2>
 ${mine
   .map(
-    (draft) =>
-      `<p><strong>${draft.title}</strong><br/>${draft.body}${draft.url ? `<br/><a href="${draft.url}">Voir la source</a>` : ""}</p>`
+    (draft) => {
+      const href = safeHref(draft.url);
+      return `<p><strong>${esc(draft.title)}</strong><br/>${esc(draft.body)}${href ? `<br/><a href="${esc(href)}">Voir la source</a>` : ""}</p>`;
+    }
   )
   .join("")}
 <p style="font-size:12px;color:#64748b">Information factuelle, pas un conseil en investissement. Gérez vos alertes dans <a href="${SITE_URL}/dashboard/alertes">votre tableau de bord</a>.</p></div>`;

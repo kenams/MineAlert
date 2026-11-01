@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { getAuthenticatedUser } from "@/lib/server/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { safeHref } from "@/lib/utils/safe-html";
 
 export const dynamic = "force-dynamic";
 
@@ -63,9 +64,9 @@ export default async function AlertHistoryPage(): Promise<JSX.Element> {
                 </p>
                 <p className="mt-1 text-sm font-medium text-[#0A0A0A]">{event.title}</p>
                 {event.body ? <p className="mt-1 text-sm text-slate-600">{event.body}</p> : null}
-                {event.url ? (
+                {safeHref(event.url) ? (
                   <Link
-                    href={event.url}
+                    href={safeHref(event.url) as string}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 inline-block text-sm text-[#1B4332] underline"

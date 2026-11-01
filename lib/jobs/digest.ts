@@ -3,14 +3,11 @@ import "server-only";
 import { computeChangePercent } from "@/lib/alerts/sweep";
 import { sendMail } from "@/lib/email/sender";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { esc, safeHref } from "@/lib/utils/safe-html";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://mine-alert-kenams.vercel.app").replace(/\/$/, "");
 const WINDOW_MS = 26 * 60 * 60 * 1000;
 const IMPORTANT = ["alerte", "financement", "resultats", "accord", "operation"];
-
-function esc(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
 
 function fmt(value: number): string {
   return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: value >= 100 ? 0 : 2 }).format(value);
@@ -80,12 +77,12 @@ export async function runDailyDigest(): Promise<{ recipients: number; sent: numb
 <h3>Cours</h3><ul>${priceLines.map((line) => `<li>${esc(line)}</li>`).join("")}</ul>
 <h3>Dépôts SEC marquants (24 h)</h3>${
     filingLines.length
-      ? `<ul>${filingLines.map((f) => `<li>${esc(f.title_fr)} — <a href="${f.url}">dépôt officiel</a></li>`).join("")}</ul>`
+      ? `<ul>${filingLines.map((f) => `<li>${esc(f.title_fr)} — <a href="${esc(safeHref(f.url) ?? SITE_URL)}">dépôt officiel</a></li>`).join("")}</ul>`
       : "<p>Aucun dépôt marquant.</p>"
   }
 <h3>À la une</h3>${
     newsLines.length
-      ? `<ul>${newsLines.map((n) => `<li><a href="${n.url}">${esc(n.title)}</a> (${esc(n.source)})</li>`).join("")}</ul>`
+      ? `<ul>${newsLines.map((n) => `<li><a href="${esc(safeHref(n.url) ?? SITE_URL)}">${esc(n.title)}</a> (${esc(n.source)})</li>`).join("")}</ul>`
       : "<p>Aucune actualité.</p>"
   }
 <p style="font-size:12px;color:#64748b">Information factuelle, pas un conseil en investissement. <a href="${SITE_URL}/dashboard">Ouvrir MineAlert</a></p></div>`;
