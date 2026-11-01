@@ -7,11 +7,19 @@ import type {
   UserPlan,
 } from "@/types";
 
+import { createT, type DictKey } from "@/lib/i18n";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
 import {
   DATA_FRESHNESS_WARNING_THRESHOLD_MS,
   DEFAULT_CURRENCY,
-  MINERAL_CATEGORIES,
 } from "@/lib/utils/constants";
+
+/**
+ * Code BCP 47 utilisé pour Intl selon la locale.
+ */
+export function intlLocale(locale: Locale): string {
+  return locale === "en" ? "en-US" : "fr-FR";
+}
 
 /**
  * Retourne une date valide ou null si l'entrée est invalide.
@@ -30,15 +38,16 @@ export function isValidDate(value: string | Date): boolean {
 }
 
 /**
- * Formate un prix avec la locale française et une devise donnée.
+ * Formate un prix dans la locale demandée (3 898,90 $ en français, $3,898.90 en anglais).
  */
 export function formatPrice(
   price: number,
-  currency: CurrencyCode = DEFAULT_CURRENCY
+  currency: CurrencyCode = DEFAULT_CURRENCY,
+  locale: Locale = DEFAULT_LOCALE
 ): string {
   const safePrice = Number.isFinite(price) ? price : 0;
 
-  return new Intl.NumberFormat("fr-FR", {
+  return new Intl.NumberFormat(intlLocale(locale), {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
@@ -47,12 +56,16 @@ export function formatPrice(
 }
 
 /**
- * Formate un nombre simple avec la locale française.
+ * Formate un nombre simple dans la locale demandée.
  */
-export function formatNumber(value: number, maximumFractionDigits = 2): string {
+export function formatNumber(
+  value: number,
+  maximumFractionDigits = 2,
+  locale: Locale = DEFAULT_LOCALE
+): string {
   const safeValue = Number.isFinite(value) ? value : 0;
 
-  return new Intl.NumberFormat("fr-FR", {
+  return new Intl.NumberFormat(intlLocale(locale), {
     minimumFractionDigits: 0,
     maximumFractionDigits,
   }).format(safeValue);
@@ -61,10 +74,10 @@ export function formatNumber(value: number, maximumFractionDigits = 2): string {
 /**
  * Formate un nombre de manière compacte pour les grands volumes.
  */
-export function formatCompactNumber(value: number): string {
+export function formatCompactNumber(value: number, locale: Locale = DEFAULT_LOCALE): string {
   const safeValue = Number.isFinite(value) ? value : 0;
 
-  return new Intl.NumberFormat("fr-FR", {
+  return new Intl.NumberFormat(intlLocale(locale), {
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(safeValue);
@@ -93,14 +106,14 @@ export function formatPercent(value: number): string {
 /**
  * Formate une date complète pour l'affichage des actualités et historiques.
  */
-export function formatDate(date: string): string {
+export function formatDate(date: string, locale: Locale = DEFAULT_LOCALE): string {
   const parsedDate = safeDate(date);
 
   if (!parsedDate) {
-    return "Date inconnue";
+    return createT(locale)("common.unknownDate");
   }
 
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -110,55 +123,75 @@ export function formatDate(date: string): string {
 }
 
 /**
+ * Date seule (jour, mois, année) dans la locale demandée.
+ */
+export function formatDay(date: string, locale: Locale = DEFAULT_LOCALE): string {
+  const parsedDate = safeDate(date);
+
+  return parsedDate ? parsedDate.toLocaleDateString(intlLocale(locale)) : createT(locale)("common.unknownDate");
+}
+
+/**
+ * Date et heure courtes dans la locale demandée.
+ */
+export function formatDateTime(date: string, locale: Locale = DEFAULT_LOCALE): string {
+  const parsedDate = safeDate(date);
+
+  return parsedDate ? parsedDate.toLocaleString(intlLocale(locale)) : createT(locale)("common.unknownDate");
+}
+
+/**
  * Retourne un libellé relatif simple à partir d'une date.
  */
-export function timeAgo(date: string): string {
+export function timeAgo(date: string, locale: Locale = DEFAULT_LOCALE): string {
+  const t = createT(locale);
   const parsedDate = safeDate(date);
 
   if (!parsedDate) {
-    return "date inconnue";
+    return t("common.unknownDateLower");
   }
 
   const diff = Date.now() - parsedDate.getTime();
   const minutes = Math.max(0, Math.floor(diff / 60000));
 
   if (minutes < 60) {
-    return `il y a ${minutes} min`;
+    return t("common.agoMinutes", { n: minutes });
   }
 
   const hours = Math.floor(minutes / 60);
 
   if (hours < 24) {
-    return `il y a ${hours}h`;
+    return t("common.agoHours", { n: hours });
   }
 
   const days = Math.floor(hours / 24);
-  return `il y a ${days}j`;
+  return t("common.agoDays", { n: days });
 }
 
 /**
  * Retourne un libelle relatif a partir d'un age exprime en millisecondes.
  */
-export function formatRelativeAge(ageMs: number): string {
+export function formatRelativeAge(ageMs: number, locale: Locale = DEFAULT_LOCALE): string {
+  const t = createT(locale);
   const safeAge = Math.max(0, Math.floor(ageMs));
   const minutes = Math.floor(safeAge / 60000);
 
   if (minutes < 1) {
-    return "il y a moins d'une minute";
+    return t("common.agoLessThanMinute");
   }
 
   if (minutes < 60) {
-    return `il y a ${minutes} min`;
+    return t("common.agoMinutesSpaced", { n: minutes });
   }
 
   const hours = Math.floor(minutes / 60);
 
   if (hours < 24) {
-    return `il y a ${hours} h`;
+    return t("common.agoHoursSpaced", { n: hours });
   }
 
   const days = Math.floor(hours / 24);
-  return `il y a ${days} j`;
+  return t("common.agoDaysSpaced", { n: days });
 }
 
 /**
@@ -166,78 +199,73 @@ export function formatRelativeAge(ageMs: number): string {
  */
 export function formatDataFreshnessLabel(
   latestDataAgeMs: number | null,
-  freshnessStatus: "fresh" | "stale" | "unavailable"
+  freshnessStatus: "fresh" | "stale" | "unavailable",
+  locale: Locale = DEFAULT_LOCALE
 ): string {
+  const t = createT(locale);
+
   if (freshnessStatus === "unavailable" || latestDataAgeMs === null) {
-    return "indisponible";
+    return t("common.unavailable");
   }
 
-  const relativeAge = formatRelativeAge(latestDataAgeMs);
+  const relativeAge = formatRelativeAge(latestDataAgeMs, locale);
 
   if (freshnessStatus === "stale" || latestDataAgeMs > DATA_FRESHNESS_WARNING_THRESHOLD_MS) {
-    return `${relativeAge} (retard)`;
+    return t("common.late", { age: relativeAge });
   }
 
   return relativeAge;
 }
 
 /**
+ * Traduit le libellé de cadence de synchronisation renvoyé par la configuration serveur.
+ */
+export function formatRefreshLabel(label: string, locale: Locale = DEFAULT_LOCALE): string {
+  const keys: Record<string, DictKey> = {
+    "quotidienne + a la demande": "refresh.daily",
+    frequente: "refresh.frequent",
+    manuelle: "refresh.manual",
+    locale: "refresh.local",
+  };
+  const key = keys[label];
+
+  return key ? createT(locale)(key) : label;
+}
+
+/**
  * Retourne un libellé lisible pour un plan d'abonnement.
  */
-export function formatPlanName(plan: UserPlan): string {
-  const labels: Record<UserPlan, string> = {
-    free: "Gratuit",
-    pro: "Pro",
-    business: "Business",
-  };
-
-  return labels[plan];
+export function formatPlanName(plan: UserPlan, locale: Locale = DEFAULT_LOCALE): string {
+  return createT(locale)(`plan.${plan}`);
 }
 
 /**
  * Retourne un libellé lisible pour un type d'alerte.
  */
-export function formatAlertType(type: AlertType): string {
-  const labels: Record<AlertType, string> = {
-    price_above: "Prix au-dessus",
-    price_below: "Prix en dessous",
-    change_percent: "Variation en pourcentage",
-    news_keyword: "Mot-clé dans les actualités",
-  };
-
-  return labels[type];
+export function formatAlertType(type: AlertType, locale: Locale = DEFAULT_LOCALE): string {
+  return createT(locale)(`alertType.${type}`);
 }
 
 /**
  * Retourne le libellé métier d'une catégorie de minerai.
  */
-export function formatMineralCategory(category: MineralCategory): string {
-  return MINERAL_CATEGORIES[category].label;
+export function formatMineralCategory(
+  category: MineralCategory,
+  locale: Locale = DEFAULT_LOCALE
+): string {
+  return createT(locale)(`category.${category}`);
 }
 
 /**
  * Retourne un libellé lisible pour le statut d'une mine.
  */
-export function formatMineStatus(status: MineStatus): string {
-  const labels: Record<MineStatus, string> = {
-    active: "Active",
-    exploration: "Exploration",
-    suspended: "Suspendue",
-    closed: "Fermée",
-  };
-
-  return labels[status];
+export function formatMineStatus(status: MineStatus, locale: Locale = DEFAULT_LOCALE): string {
+  return createT(locale)(`mineStatus.${status}`);
 }
 
 /**
  * Retourne un libellé lisible pour le sentiment d'un article.
  */
-export function formatSentiment(sentiment: SentimentType): string {
-  const labels: Record<SentimentType, string> = {
-    positive: "Positif",
-    negative: "Négatif",
-    neutral: "Neutre",
-  };
-
-  return labels[sentiment];
+export function formatSentiment(sentiment: SentimentType, locale: Locale = DEFAULT_LOCALE): string {
+  return createT(locale)(`sentiment.${sentiment}`);
 }

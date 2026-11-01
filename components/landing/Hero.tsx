@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, BellRing, LineChart, ShieldCheck } from "lucide-react";
 
+import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { mineralName } from "@/lib/data/minerals";
+import { createT, localePath, type Locale, type TranslateFn } from "@/lib/i18n";
 import { getMinerals, isDemoMode } from "@/lib/server/data";
 import type { Mineral } from "@/types";
 
@@ -18,76 +21,83 @@ function formatUsd(value: number): string {
   }).format(value);
 }
 
-function formatAge(mineral: Mineral): string {
+function formatAge(mineral: Mineral, locale: Locale, t: TranslateFn): string {
   const asOf = Date.parse(mineral.quoteTime ?? mineral.lastUpdated);
   if (!Number.isFinite(asOf)) return "";
   const minutes = Math.max(0, Math.round((Date.now() - asOf) / 60000));
-  if (minutes < 60) return `il y a ${minutes} min`;
+  if (minutes < 60) return t("common.agoMinutes", { n: minutes });
   // Marché fermé (week-end, nuit) : on donne la date du dernier cours coté, pas l'heure de synchronisation.
-  return `dernier cours du ${new Date(asOf).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })}`;
+  const date =
+    locale === "en"
+      ? `${new Date(asOf).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC`
+      : new Date(asOf).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+  return t("hero.lastQuote", { date });
 }
 
 /**
  * Hero principal de la landing MineAlert.
  */
-export async function Hero(): Promise<JSX.Element> {
+export async function Hero({ locale }: { locale: Locale }): Promise<JSX.Element> {
+  const t = createT(locale);
   const demo = isDemoMode();
   const minerals = await getMinerals();
   const quotes = HERO_SYMBOLS.map((symbol) => minerals.find((m: Mineral) => m.symbol === symbol)).filter(
     (m): m is Mineral =>
       Boolean(m && m.currentPrice > 0 && (demo || Date.now() - Date.parse(m.lastUpdated) < MAX_QUOTE_AGE_MS))
   );
+  const tiles = [
+    { Icon: BellRing, label: t("hero.tileAlerts") },
+    { Icon: LineChart, label: t("hero.tileTrends") },
+    { Icon: ShieldCheck, label: t("hero.tileRisk") },
+  ];
 
   return (
     <section className="relative overflow-hidden bg-[#0A0A0A] text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(212,175,55,0.18),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(27,67,50,0.38),_transparent_42%)]" />
-      <div className="container-shell relative grid gap-10 px-4 py-20 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8 lg:py-28">
+      <PublicHeader locale={locale} />
+      <div className="container-shell relative grid gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8 lg:py-24">
         <div className="space-y-7">
           <span className="inline-flex rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-1 text-sm text-[#D4AF37]">
-            Veille minière mondiale pour investisseurs
+            {t("hero.badge")}
           </span>
           <div className="space-y-5">
             <h1 className="max-w-3xl text-4xl font-semibold leading-tight sm:text-5xl lg:text-6xl">
-              Surveillez les marchés miniers mondiaux sans bruit inutile.
+              {t("hero.title")}
             </h1>
-            <p className="max-w-2xl text-lg leading-8 text-white/72">
-              Cours des métaux, dépôts réglementaires des sociétés minières traduits en français, risque pays et alertes par e-mail : l'information utile aux petits porteurs, sans le prix d'un terminal.
-            </p>
+            <p className="max-w-2xl text-lg leading-8 text-white/72">{t("hero.subtitle")}</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Link href="/register">
+            <Link href={localePath(locale, "/register")}>
               <Button size="lg" icon={<ArrowRight className="h-4 w-4" />}>
-                Commencer gratuitement
+                {t("hero.cta")}
               </Button>
             </Link>
-            <Link href="/login">
+            <Link href={localePath(locale, "/login")}>
               <Button variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10">
-                Voir le dashboard
+                {t("hero.ctaDashboard")}
               </Button>
             </Link>
           </div>
           <div className="flex flex-wrap gap-6 text-sm text-white/65">
-            <span>41 sociétés minières suivies</span>
-            <span>Dépôts SEC en français</span>
-            <span>Alertes par e-mail</span>
+            <span>{t("hero.stat1")}</span>
+            <span>{t("hero.stat2")}</span>
+            <span>{t("hero.stat3")}</span>
           </div>
         </div>
 
         <Card variant="gold" className="border-none bg-white/95 text-[#0A0A0A] shadow-[0_24px_72px_-24px_rgba(0,0,0,0.55)]">
           <Card.Header className="mb-5 flex-col items-start gap-3">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-              Aperçu du cockpit
+              {t("hero.previewLabel")}
             </p>
-            <h2 className="text-2xl font-semibold">Signal clair, lecture rapide.</h2>
+            <h2 className="text-2xl font-semibold">{t("hero.previewTitle")}</h2>
           </Card.Header>
           <Card.Body className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-3">
-              {[BellRing, LineChart, ShieldCheck].map((Icon, index) => (
-                <div key={index} className="rounded-2xl border border-slate-200 bg-white p-4">
+              {tiles.map(({ Icon, label }) => (
+                <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4">
                   <Icon className="h-5 w-5 text-[#1B4332]" />
-                  <p className="mt-3 text-sm font-medium text-[#0A0A0A]">
-                    {index === 0 ? "Alertes" : index === 1 ? "Tendances" : "Risque"}
-                  </p>
+                  <p className="mt-3 text-sm font-medium text-[#0A0A0A]">{label}</p>
                 </div>
               ))}
             </div>
@@ -95,12 +105,14 @@ export async function Hero(): Promise<JSX.Element> {
               <div className="grid gap-3 sm:grid-cols-2">
                 {quotes.length === 0 ? (
                   <p className="col-span-full rounded-2xl bg-white p-4 text-sm text-slate-500 shadow-sm">
-                    Cours en cours de mise à jour.
+                    {t("hero.updating")}
                   </p>
                 ) : (
                   quotes.map((mineral) => (
                     <div key={mineral.symbol} className="rounded-2xl bg-white p-4 shadow-sm">
-                      <p className="text-sm text-slate-500">{mineral.name}</p>
+                      <p className="text-sm text-slate-500">
+                        {mineralName(locale, mineral.symbol, mineral.name)}
+                      </p>
                       <p className="mt-2 text-2xl font-semibold">{formatUsd(mineral.currentPrice)}</p>
                       {mineral.priceChangePercent24h !== 0 && (
                         <p
@@ -108,20 +120,19 @@ export async function Hero(): Promise<JSX.Element> {
                             mineral.priceChangePercent24h > 0 ? "text-emerald-700" : "text-red-700"
                           }`}
                         >
-                          {mineral.priceChangePercent24h > 0 ? "+" : ""}
-                          {mineral.priceChangePercent24h.toFixed(2)}% sur 24h
+                          {t("hero.change24h", {
+                            value: `${mineral.priceChangePercent24h > 0 ? "+" : ""}${mineral.priceChangePercent24h.toFixed(2)}%`,
+                          })}
                         </p>
                       )}
                       <p className="mt-1 text-xs text-slate-400">
-                        {demo ? "Exemple" : formatAge(mineral)}
+                        {demo ? t("hero.example") : formatAge(mineral, locale, t)}
                       </p>
                     </div>
                   ))
                 )}
               </div>
-              <p className="mt-3 text-xs text-slate-400">
-                Cours indicatifs (contrats à terme COMEX/NYMEX), qui peuvent différer du prix spot. Source : Yahoo Finance.
-              </p>
+              <p className="mt-3 text-xs text-slate-400">{t("hero.quoteNote")}</p>
             </div>
           </Card.Body>
         </Card>

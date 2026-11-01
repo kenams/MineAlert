@@ -12,9 +12,12 @@ import {
   UserCircle2,
 } from "lucide-react";
 
+import type { DictKey } from "@/lib/i18n";
+import { stripLocale } from "@/lib/i18n/paths";
+
 export type LayoutNavItem = {
   href: string;
-  label: string;
+  labelKey: DictKey;
   icon: LucideIcon;
 };
 
@@ -22,35 +25,37 @@ export type LayoutNavItem = {
  * Navigation principale du dashboard MineAlert.
  */
 export const MAIN_NAV_ITEMS: readonly LayoutNavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/minerais", label: "Minerais", icon: Gem },
-  { href: "/dashboard/actualites", label: "Actualités", icon: Globe2 },
-  { href: "/dashboard/alertes", label: "Alertes", icon: BellRing },
-  { href: "/dashboard/depots", label: "Dépôts SEC", icon: FileText },
-  { href: "/dashboard/risque-pays", label: "Risque pays", icon: ShieldAlert },
-  { href: "/dashboard/carte", label: "Carte mondiale", icon: Map },
+  { href: "/dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
+  { href: "/dashboard/minerais", labelKey: "nav.minerals", icon: Gem },
+  { href: "/dashboard/actualites", labelKey: "nav.news", icon: Globe2 },
+  { href: "/dashboard/alertes", labelKey: "nav.alerts", icon: BellRing },
+  { href: "/dashboard/depots", labelKey: "nav.filings", icon: FileText },
+  { href: "/dashboard/risque-pays", labelKey: "nav.countryRisk", icon: ShieldAlert },
+  { href: "/dashboard/carte", labelKey: "nav.map", icon: Map },
 ] as const;
 
 /**
  * Navigation secondaire liée au compte utilisateur.
  */
 export const ACCOUNT_NAV_ITEMS: readonly LayoutNavItem[] = [
-  { href: "/dashboard/profil", label: "Mon profil", icon: UserCircle2 },
-  { href: "/dashboard/parametres", label: "Paramètres", icon: Settings },
-  { href: "/dashboard/plan", label: "Mon plan", icon: ShieldCheck },
+  { href: "/dashboard/profil", labelKey: "nav.profile", icon: UserCircle2 },
+  { href: "/dashboard/parametres", labelKey: "nav.settings", icon: Settings },
+  { href: "/dashboard/plan", labelKey: "nav.plan", icon: ShieldCheck },
 ] as const;
 
 /**
- * Détermine si une entrée de navigation doit être considérée comme active.
+ * Détermine si une entrée de navigation doit être considérée comme active (le préfixe de langue est ignoré).
  */
 export function isNavItemActive(currentPath: string | undefined, href: string): boolean {
   if (!currentPath) {
     return href === "/dashboard";
   }
 
+  const { path } = stripLocale(currentPath);
+
   if (href === "/dashboard") {
-    return currentPath === "/dashboard";
+    return path === "/dashboard";
   }
 
-  return currentPath === href || currentPath.startsWith(`${href}/`);
+  return path === href || path.startsWith(`${href}/`);
 }

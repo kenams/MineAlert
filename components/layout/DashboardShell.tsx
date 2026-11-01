@@ -7,6 +7,7 @@ import { Header } from "@/components/layout/Header";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAlerts } from "@/hooks/useAlerts";
+import { useLocale } from "@/lib/i18n/provider";
 import { usePrices } from "@/hooks/usePrices";
 import { useSystemStatus } from "@/hooks/useSystemStatus";
 import { formatDataFreshnessLabel, timeAgo } from "@/lib/utils/formatters";
@@ -25,6 +26,7 @@ export function DashboardShell({
   userProfile,
 }: DashboardShellProps): JSX.Element {
   const pathname = usePathname();
+  const locale = useLocale();
   const { prices } = usePrices();
   const { alerts } = useAlerts();
   const { status } = useSystemStatus();
@@ -40,19 +42,20 @@ export function DashboardShell({
       return undefined;
     }
 
-    return timeAgo(new Date(latestTimestamp).toISOString());
-  }, [prices]);
+    return timeAgo(new Date(latestTimestamp).toISOString(), locale);
+  }, [locale, prices]);
 
   const lastUpdated = useMemo(() => {
     if (status) {
       return formatDataFreshnessLabel(
         status.latestDataAgeMs,
-        status.freshnessStatus
+        status.freshnessStatus,
+        locale
       );
     }
 
     return fallbackLastUpdated;
-  }, [fallbackLastUpdated, status]);
+  }, [fallbackLastUpdated, locale, status]);
 
   const lastUpdatedState = status?.freshnessStatus ?? "fresh";
   const notificationCount = useMemo(

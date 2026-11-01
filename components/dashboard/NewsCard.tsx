@@ -2,7 +2,10 @@ import { ExternalLink } from "lucide-react";
 
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-import { timeAgo } from "@/lib/utils/formatters";
+import { countryLabel } from "@/lib/data/countries";
+import { newsMineralLabel } from "@/lib/data/minerals";
+import { useLocale, useT } from "@/lib/i18n/provider";
+import { formatSentiment, timeAgo } from "@/lib/utils/formatters";
 import type { NewsArticle } from "@/types";
 
 type NewsCardProps = {
@@ -13,6 +16,9 @@ type NewsCardProps = {
  * Carte d'actualité minière enrichie avec source, tags et sentiment.
  */
 export function NewsCard({ article }: NewsCardProps): JSX.Element {
+  const locale = useLocale();
+  const t = useT();
+
   return (
     <Card variant="bordered" className="h-full">
       <Card.Header className="mb-3 flex-col items-start gap-2">
@@ -21,11 +27,11 @@ export function NewsCard({ article }: NewsCardProps): JSX.Element {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               {article.source}
             </p>
-            <p className="mt-1 text-xs text-slate-500">{timeAgo(article.publishedAt)}</p>
+            <p className="mt-1 text-xs text-slate-500">{timeAgo(article.publishedAt, locale)}</p>
           </div>
 
           <div className="flex items-center gap-2">
-            {article.isBreaking ? <Badge variant="negative">BREAKING</Badge> : null}
+            {article.isBreaking ? <Badge variant="negative">{t("news.breaking")}</Badge> : null}
             <Badge
               variant={
                 article.sentiment === "positive"
@@ -35,7 +41,7 @@ export function NewsCard({ article }: NewsCardProps): JSX.Element {
                     : "neutral"
               }
             >
-              {article.sentiment}
+              {formatSentiment(article.sentiment, locale)}
             </Badge>
           </div>
         </div>
@@ -53,12 +59,12 @@ export function NewsCard({ article }: NewsCardProps): JSX.Element {
         <div className="flex flex-wrap gap-2">
           {article.minerals.map((mineral) => (
             <Badge key={`${article.id}-${mineral}`} variant="category" compact>
-              {mineral}
+              {newsMineralLabel(locale, mineral)}
             </Badge>
           ))}
           {article.countries.map((country) => (
             <Badge key={`${article.id}-${country}`} variant="neutral" compact>
-              {country}
+              {countryLabel(locale, country)}
             </Badge>
           ))}
         </div>
@@ -71,7 +77,7 @@ export function NewsCard({ article }: NewsCardProps): JSX.Element {
           rel="noreferrer"
           className="inline-flex items-center gap-2 text-sm font-medium text-[#1B4332] transition hover:text-[#163829]"
         >
-          Lire l'article
+          {t("news.read")}
           <ExternalLink className="h-4 w-4" />
         </a>
       </Card.Footer>

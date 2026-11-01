@@ -4,7 +4,10 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
+import { useT } from "@/lib/i18n/provider";
+import type { TranslateFn } from "@/lib/i18n";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { readApiErrorMessage } from "@/lib/utils/api-errors";
 import { LIVE_PORTFOLIO_REFRESH_MS } from "@/lib/utils/constants";
 import type { ApiResponse, CurrencyCode, UserAlert } from "@/types";
 
@@ -136,7 +139,7 @@ async function fetchAlerts(): Promise<UserAlert[]> {
     });
 
     if (!response.ok) {
-      throw new Error("Impossible de charger les alertes.");
+      throw new Error("alerts_load_failed");
     }
 
     const payload = (await response.json()) as AlertsApiPayload;
@@ -150,7 +153,7 @@ async function fetchAlerts(): Promise<UserAlert[]> {
   }
 }
 
-async function createAlert(input: CreateAlertInput): Promise<UserAlert> {
+async function createAlert(input: CreateAlertInput, t: TranslateFn): Promise<UserAlert> {
   const response = await fetch("/api/alertes", {
     method: "POST",
     headers: {
@@ -162,7 +165,7 @@ async function createAlert(input: CreateAlertInput): Promise<UserAlert> {
 
   if (!response.ok) {
     throw new Error(
-      "Impossible de créer l'alerte pour le moment. Vérifiez que l'API /api/alertes est disponible."
+      (await readApiErrorMessage(response, t)) ?? t("hook.alertCreate")
     );
   }
 
@@ -172,7 +175,7 @@ async function createAlert(input: CreateAlertInput): Promise<UserAlert> {
 
   if (isApiResponse<UserAlert>(payload)) {
     if (!payload.success || !payload.data) {
-      throw new Error(payload.error ?? "Création d'alerte indisponible.");
+      throw new Error(t("hook.alertCreateUnavailable"));
     }
 
     return payload.data;
@@ -181,7 +184,7 @@ async function createAlert(input: CreateAlertInput): Promise<UserAlert> {
   return payload;
 }
 
-async function deleteAlert(input: DeleteAlertInput): Promise<void> {
+async function deleteAlert(input: DeleteAlertInput, t: TranslateFn): Promise<void> {
   const response = await fetch("/api/alertes", {
     method: "DELETE",
     headers: {
@@ -193,7 +196,7 @@ async function deleteAlert(input: DeleteAlertInput): Promise<void> {
 
   if (!response.ok) {
     throw new Error(
-      "Impossible de supprimer l'alerte pour le moment. Vérifiez que l'API /api/alertes est disponible."
+      (await readApiErrorMessage(response, t)) ?? t("hook.alertDelete")
     );
   }
 }
@@ -203,6 +206,7 @@ async function deleteAlert(input: DeleteAlertInput): Promise<void> {
  */
 export function useAlerts() {
   const queryClient = useQueryClient();
+  const t = useT();
 
   const query = useQuery({
     queryKey: ["alerts"],
@@ -213,14 +217,14 @@ export function useAlerts() {
   });
 
   const createMutation = useMutation({
-    mutationFn: createAlert,
+    mutationFn: (input: CreateAlertInput) => createAlert(input, t),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["alerts"] });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteAlert,
+    mutationFn: (input: DeleteAlertInput) => deleteAlert(input, t),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["alerts"] });
     },

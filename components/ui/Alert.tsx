@@ -3,6 +3,7 @@
 import { useState, type HTMLAttributes, type ReactNode } from "react";
 import { Info, OctagonAlert, TriangleAlert, X, CheckCircle2 } from "lucide-react";
 
+import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils/cn";
 
 type AlertVariant = "success" | "error" | "warning" | "info";
@@ -42,6 +43,7 @@ export function Alert({
   children,
   ...props
 }: AlertProps): JSX.Element | null {
+  const t = useT();
   const [visible, setVisible] = useState(true);
 
   if (!visible) {
@@ -75,7 +77,7 @@ export function Alert({
           type="button"
           onClick={handleClose}
           className="rounded-full p-1 transition hover:bg-black/5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-black/10"
-          aria-label="Fermer l'alerte"
+          aria-label={t("common.closeAlert")}
         >
           <X className="h-4 w-4" />
         </button>

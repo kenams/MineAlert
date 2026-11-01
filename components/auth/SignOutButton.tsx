@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button, type ButtonProps } from "@/components/ui/Button";
+import { localePath } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n/provider";
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -15,11 +17,14 @@ type SignOutButtonProps = Omit<ButtonProps, "onClick" | "children"> & {
  * Deconnecte l'utilisateur courant quel que soit le mode actif.
  */
 export function SignOutButton({
-  label = "Se deconnecter",
+  label,
   loading,
   ...props
 }: SignOutButtonProps): JSX.Element {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useT();
+  const loginPath = localePath(locale, "/login");
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handleSignOut = async () => {
@@ -38,11 +43,11 @@ export function SignOutButton({
       }
 
       if (typeof window !== "undefined") {
-        window.location.assign("/login");
+        window.location.assign(loginPath);
         return;
       }
 
-      router.replace("/login");
+      router.replace(loginPath);
     } finally {
       setIsSigningOut(false);
     }
@@ -56,7 +61,7 @@ export function SignOutButton({
       onClick={() => void handleSignOut()}
       loading={loading || isSigningOut}
     >
-      {label}
+      {label ?? t("auth.signOut")}
     </Button>
   );
 }

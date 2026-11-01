@@ -7,6 +7,8 @@ import { X } from "lucide-react";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { localePath } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils/cn";
 import type { UserPlan } from "@/types";
 
@@ -45,9 +47,12 @@ export function MobileNav({
   onClose,
   currentPath,
   userPlan = "free",
-  userName = "Investisseur",
+  userName,
   className,
 }: MobileNavProps): JSX.Element | null {
+  const locale = useLocale();
+  const t = useT();
+  const displayName = userName ?? t("nav.investor");
   const planLabel = getPlanLabel(userPlan);
 
   useEffect(() => {
@@ -88,10 +93,10 @@ export function MobileNav({
           className
         )}
         onClick={(event) => event.stopPropagation()}
-        aria-label="Navigation mobile"
+        aria-label={t("nav.mobile")}
       >
         <div className="flex items-center justify-between gap-3 pb-6">
-          <Link href="/dashboard" className="inline-flex items-center gap-2" onClick={onClose}>
+          <Link href={localePath(locale, "/dashboard")} className="inline-flex items-center gap-2" onClick={onClose}>
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#D4AF37] text-sm font-bold text-[#0A0A0A]">
               M
             </span>
@@ -105,7 +110,7 @@ export function MobileNav({
             size="sm"
             onClick={onClose}
             className="h-9 w-9 min-w-0 rounded-full border border-white/10 p-0 text-white hover:bg-white/10"
-            aria-label="Fermer le menu"
+            aria-label={t("nav.closeMenu")}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -114,7 +119,7 @@ export function MobileNav({
         <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-sm font-semibold text-white">
-              {userName
+              {displayName
                 .split(" ")
                 .filter(Boolean)
                 .slice(0, 2)
@@ -123,7 +128,7 @@ export function MobileNav({
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-white">{userName}</p>
+              <p className="truncate text-sm font-medium text-white">{displayName}</p>
               {planLabel ? (
                 <div className="pt-1">
                   <Badge variant="gold" compact>
@@ -131,7 +136,7 @@ export function MobileNav({
                   </Badge>
                 </div>
               ) : (
-                <p className="text-xs text-white/55">Plan gratuit</p>
+                <p className="text-xs text-white/55">{t("nav.freePlan")}</p>
               )}
             </div>
           </div>
@@ -140,7 +145,7 @@ export function MobileNav({
         <nav className="space-y-8 overflow-y-auto">
           <div className="space-y-2">
             <p className="px-3 text-xs font-medium uppercase tracking-[0.24em] text-white/45">
-              Marchés
+              {t("nav.markets")}
             </p>
 
             <ul className="space-y-1.5">
@@ -151,7 +156,7 @@ export function MobileNav({
                 return (
                   <li key={item.href}>
                     <Link
-                      href={item.href}
+                      href={localePath(locale, item.href)}
                       onClick={onClose}
                       className={cn(
                         "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm transition",
@@ -162,7 +167,7 @@ export function MobileNav({
                       aria-current={active ? "page" : undefined}
                     >
                       <Icon className="h-5 w-5" />
-                      <span className="font-medium">{item.label}</span>
+                      <span className="font-medium">{t(item.labelKey)}</span>
                     </Link>
                   </li>
                 );
@@ -172,7 +177,7 @@ export function MobileNav({
 
           <div className="space-y-2">
             <p className="px-3 text-xs font-medium uppercase tracking-[0.24em] text-white/45">
-              Compte
+              {t("nav.account")}
             </p>
 
             <ul className="space-y-1.5">
@@ -183,7 +188,7 @@ export function MobileNav({
                 return (
                   <li key={item.href}>
                     <Link
-                      href={item.href}
+                      href={localePath(locale, item.href)}
                       onClick={onClose}
                       className={cn(
                         "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm transition",
@@ -194,7 +199,7 @@ export function MobileNav({
                       aria-current={active ? "page" : undefined}
                     >
                       <Icon className="h-5 w-5" />
-                      <span className="font-medium">{item.label}</span>
+                      <span className="font-medium">{t(item.labelKey)}</span>
                     </Link>
                   </li>
                 );
@@ -208,7 +213,7 @@ export function MobileNav({
             variant="outline"
             fullWidth
             className="border-white/15 text-white hover:bg-white/10 hover:text-white"
-            label="Se déconnecter"
+            label={t("auth.signOutLong")}
           />
         </div>
       </aside>

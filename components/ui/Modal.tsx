@@ -9,6 +9,7 @@ import {
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
+import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils/cn";
 
 type ModalSize = "sm" | "md" | "lg" | "xl";
@@ -40,6 +41,7 @@ export function Modal({
   footer,
   size = "md",
 }: ModalProps): JSX.Element | null {
+  const t = useT();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -107,7 +109,7 @@ export function Modal({
             type="button"
             onClick={onClose}
             className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-[#0A0A0A] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1B4332]/15"
-            aria-label="Fermer la modale"
+            aria-label={t("common.closeModal")}
           >
             <X className="h-4 w-4" />
           </button>

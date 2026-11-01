@@ -4,6 +4,7 @@ import {
   getMinerals,
   getUserAlerts,
 } from "@/lib/server/data";
+import { mineralName } from "@/lib/data/minerals";
 import { formatAlertType } from "@/lib/utils/formatters";
 import type { Mineral, UserAlert } from "@/types";
 
@@ -41,10 +42,11 @@ export async function triggerAlert(
 
     await sendAlertEmail({
       to: profile.email,
-      mineralName: mineral.name,
+      mineralName: mineralName(profile.locale ?? "fr", mineral.symbol, mineral.name),
       threshold: alert.threshold,
       currentPrice: mineral.currentPrice,
-      alertLabel: formatAlertType(alert.type),
+      alertLabel: formatAlertType(alert.type, profile.locale ?? "fr"),
+      locale: profile.locale ?? "fr",
     });
   } catch {
     return;

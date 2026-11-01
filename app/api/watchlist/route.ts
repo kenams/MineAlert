@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { UnauthorizedError } from "@/lib/server/auth";
+import { AppError } from "@/lib/utils/api-errors";
 import {
   addMineralToWatchlist,
   getWatchlistMinerals,
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           error instanceof Error
             ? error.message
             : "Ajout à la watchlist impossible.",
+        code: error instanceof AppError ? error.code : undefined,
       },
       { status: 400 }
     );
@@ -105,6 +107,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
           error instanceof Error
             ? error.message
             : "Suppression de la watchlist impossible.",
+        code: error instanceof AppError ? error.code : undefined,
       },
       { status: 400 }
     );

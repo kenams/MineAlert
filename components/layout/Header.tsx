@@ -4,8 +4,11 @@ import { useMemo, useState, type ChangeEvent } from "react";
 import { Bell, Menu, Search } from "lucide-react";
 
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
+import { stripLocale, type DictKey, type TranslateFn } from "@/lib/i18n";
+import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils/cn";
 
 export type HeaderProps = {
@@ -23,19 +26,34 @@ export type HeaderProps = {
 /**
  * Construit un libelle de page lisible a partir du chemin courant si aucun titre n'est fourni.
  */
-export function getHeaderTitle(currentPath?: string): string {
-  if (!currentPath || currentPath === "/" || currentPath === "/dashboard") {
-    return "Dashboard";
+const SEGMENT_LABELS: Record<string, DictKey> = {
+  minerais: "nav.minerals",
+  actualites: "nav.news",
+  alertes: "nav.alerts",
+  historique: "nav.alertHistory",
+  depots: "nav.filings",
+  "risque-pays": "nav.countryRisk",
+  carte: "nav.map",
+  profil: "nav.profile",
+  parametres: "nav.settings",
+  plan: "nav.plan",
+};
+
+export function getHeaderTitle(currentPath: string | undefined, t: TranslateFn): string {
+  const path = currentPath ? stripLocale(currentPath).path : undefined;
+
+  if (!path || path === "/" || path === "/dashboard") {
+    return t("nav.dashboard");
   }
 
-  const segments = currentPath
+  const segments = path
     .split("/")
     .filter(Boolean)
     .filter((segment) => segment !== "dashboard")
     .map((segment) =>
-      segment
-        .replace(/-/g, " ")
-        .replace(/^\w/, (letter) => letter.toUpperCase())
+      SEGMENT_LABELS[segment]
+        ? t(SEGMENT_LABELS[segment])
+        : segment.replace(/-/g, " ").replace(/^\w/, (letter) => letter.toUpperCase())
     );
 
   return segments.join(" / ");
@@ -63,17 +81,19 @@ export function Header({
   lastUpdated,
   lastUpdatedState = "fresh",
   notificationCount = 0,
-  userName = "Investisseur",
+  userName,
   onMenuClick,
   onSearch,
   className,
 }: HeaderProps): JSX.Element {
+  const t = useT();
   const [searchValue, setSearchValue] = useState("");
+  const displayName = userName ?? t("nav.investor");
   const resolvedTitle = useMemo(
-    () => title ?? getHeaderTitle(currentPath),
-    [currentPath, title]
+    () => title ?? getHeaderTitle(currentPath, t),
+    [currentPath, title, t]
   );
-  const initials = getUserInitials(userName);
+  const initials = getUserInitials(displayName);
 
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextValue = event.target.value;
@@ -93,7 +113,7 @@ export function Header({
           type="button"
           onClick={onMenuClick}
           className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-[#0A0A0A] transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1B4332]/15 lg:hidden"
-          aria-label="Ouvrir le menu"
+          aria-label={t("nav.openMenu")}
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -114,7 +134,7 @@ export function Header({
                     : "text-slate-500"
               )}
             >
-              Derniere mise a jour : {lastUpdated}
+              {t("header.lastUpdate", { value: lastUpdated })}
             </p>
           ) : null}
         </div>
@@ -123,18 +143,19 @@ export function Header({
           <Input
             value={searchValue}
             onChange={handleSearchChange}
-            placeholder="Rechercher un minerai, une actualite ou un pays..."
+            placeholder={t("header.search")}
             leftIcon={<Search className="h-4 w-4" />}
             wrapperClassName="max-w-xl"
           />
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <LanguageSwitcher />
           <button
             type="button"
             data-testid="header-notifications-button"
             className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 hover:text-[#0A0A0A] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1B4332]/15"
-            aria-label="Notifications"
+            aria-label={t("header.notifications")}
           >
             <Bell className="h-5 w-5" />
             {notificationCount > 0 ? (
@@ -150,11 +171,11 @@ export function Header({
             </div>
             <div className="hidden min-w-0 md:block">
               <p className="truncate text-sm font-medium text-[#0A0A0A]">
-                {userName}
+                {displayName}
               </p>
               <div className="pt-0.5">
                 <Badge variant="neutral" compact>
-                  Compte
+                  {t("header.account")}
                 </Badge>
               </div>
             </div>
@@ -164,7 +185,7 @@ export function Header({
             variant="outline"
             size="sm"
             className="hidden rounded-xl md:inline-flex"
-            label="Deconnexion"
+            label={t("header.signOut")}
           />
         </div>
       </div>
@@ -173,7 +194,7 @@ export function Header({
         <Input
           value={searchValue}
           onChange={handleSearchChange}
-          placeholder="Rechercher un minerai ou une actu..."
+          placeholder={t("header.searchShort")}
           leftIcon={<Search className="h-4 w-4" />}
         />
       </div>

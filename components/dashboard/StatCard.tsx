@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 
 import { Card } from "@/components/ui/Card";
+import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils/cn";
 
 type StatCardProps = {
@@ -26,6 +27,7 @@ export function StatCard({
   icon,
   trend = "neutral",
 }: StatCardProps): JSX.Element {
+  const t = useT();
   const TrendIcon =
     trend === "up" ? ArrowUpRight : trend === "down" ? ArrowDownRight : Minus;
 
@@ -51,7 +53,7 @@ export function StatCard({
             )}
           >
             <TrendIcon className="h-4 w-4" />
-            {change ?? "Stable"}
+            {change ?? t("common.stable")}
           </span>
           {changePercent ? <span className="text-slate-500">{changePercent}</span> : null}
         </div>

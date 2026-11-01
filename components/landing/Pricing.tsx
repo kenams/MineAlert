@@ -2,51 +2,53 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-
-const PLANS = [
-  {
-    name: "Gratuit",
-    price: "0€",
-    description: "Pour suivre le marché et tester les alertes.",
-    features: [
-      "5 alertes (prix, variation 24 h, mot-clé)",
-      "Dépôts SEC de 41 sociétés minières en français",
-      "Fiche risque pays (40 pays)",
-      "Cours en direct : or, argent, platine, cuivre",
-    ],
-    highlight: false,
-  },
-  {
-    name: "Pro",
-    price: "9,99€/mois",
-    description: "Pour ne rien manquer sans surveiller l'écran.",
-    features: [
-      "Tout le plan Gratuit",
-      "50 alertes",
-      "Résumé quotidien par e-mail en français",
-      "Cours, dépôts marquants et actualités à 7 h",
-    ],
-    highlight: true,
-  },
-];
+import { createT, localePath, type Locale } from "@/lib/i18n";
 
 /**
- * Affiche les trois plans commerciaux de MineAlert.
+ * Affiche les plans commerciaux de MineAlert.
  */
-export function Pricing(): JSX.Element {
+export function Pricing({ locale }: { locale: Locale }): JSX.Element {
+  const t = createT(locale);
+  const plans = [
+    {
+      name: t("plan.free"),
+      price: t("pricing.free.price"),
+      description: t("pricing.free.text"),
+      features: [
+        t("pricing.free.f1"),
+        t("pricing.free.f2"),
+        t("pricing.free.f3"),
+        t("pricing.free.f4"),
+      ],
+      highlight: false,
+    },
+    {
+      name: t("plan.pro"),
+      price: t("pricing.pro.price"),
+      description: t("pricing.pro.text"),
+      features: [
+        t("pricing.pro.f1"),
+        t("pricing.pro.f2"),
+        t("pricing.pro.f3"),
+        t("pricing.pro.f4"),
+      ],
+      highlight: true,
+    },
+  ];
+
   return (
     <section className="container-shell px-4 py-16 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#1B4332]">
-          Tarification
+          {t("pricing.eyebrow")}
         </p>
         <h2 className="mt-4 text-3xl font-semibold text-[#0A0A0A] sm:text-4xl">
-          Des plans lisibles, sans surprise.
+          {t("pricing.title")}
         </h2>
       </div>
 
       <div className="mx-auto mt-12 grid max-w-3xl gap-5 lg:grid-cols-2">
-        {PLANS.map((plan) => (
+        {plans.map((plan) => (
           <Card
             key={plan.name}
             variant={plan.highlight ? "gold" : "elevated"}
@@ -65,9 +67,9 @@ export function Pricing(): JSX.Element {
               </ul>
             </Card.Body>
             <Card.Footer>
-              <Link href="/register" className="w-full">
+              <Link href={localePath(locale, "/register")} className="w-full">
                 <Button variant={plan.highlight ? "secondary" : "primary"} fullWidth>
-                  Choisir {plan.name}
+                  {t("pricing.choose", { plan: plan.name })}
                 </Button>
               </Link>
             </Card.Footer>

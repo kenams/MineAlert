@@ -9,6 +9,9 @@ import {
 } from "react-simple-maps";
 
 import { Card } from "@/components/ui/Card";
+import { countryLabel } from "@/lib/data/countries";
+import { newsMineralLabel } from "@/lib/data/minerals";
+import { useLocale, useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils/cn";
 import type { Mine } from "@/types";
 
@@ -45,6 +48,8 @@ export function WorldMap({
   statusFilter = "all",
   onMineSelect,
 }: WorldMapProps): JSX.Element {
+  const locale = useLocale();
+  const t = useT();
   const [hoveredMineId, setHoveredMineId] = useState<string | null>(null);
 
   const filteredMines = useMemo(
@@ -70,9 +75,9 @@ export function WorldMap({
     <Card variant="elevated" className="overflow-hidden">
       <Card.Header>
         <div>
-          <p className="text-sm font-medium text-slate-500">Carte mondiale des mines</p>
+          <p className="text-sm font-medium text-slate-500">{t("map.title")}</p>
           <h3 className="mt-1 text-lg font-semibold text-[#0A0A0A]">
-            {filteredMines.length} sites suivis
+            {t("map.sites", { n: filteredMines.length })}
           </h3>
         </div>
       </Card.Header>
@@ -117,10 +122,10 @@ export function WorldMap({
             <div className="absolute left-4 top-4 max-w-xs rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur">
               <p className="text-sm font-semibold text-[#0A0A0A]">{hoveredMine.name}</p>
               <p className="mt-1 text-sm text-slate-500">
-                {hoveredMine.country} · {hoveredMine.company}
+                {countryLabel(locale, hoveredMine.country)} · {hoveredMine.company}
               </p>
               <p className="mt-2 text-xs text-slate-600">
-                {hoveredMine.minerals.join(", ")}
+                {hoveredMine.minerals.map((item) => newsMineralLabel(locale, item)).join(", ")}
               </p>
             </div>
           ) : null}
@@ -128,10 +133,10 @@ export function WorldMap({
 
         <div className="flex flex-wrap gap-3 text-sm">
           {[
-            ["active", "Actives"],
-            ["exploration", "Exploration"],
-            ["suspended", "Suspendues"],
-            ["closed", "Fermées"],
+            ["active", t("map.legendActive")],
+            ["exploration", t("map.legendExploration")],
+            ["suspended", t("map.legendSuspended")],
+            ["closed", t("map.legendClosed")],
           ].map(([status, label]) => (
             <div key={status} className="inline-flex items-center gap-2">
               <span

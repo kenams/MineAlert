@@ -18,7 +18,9 @@ import {
 import { maybeRunOnDemandSync } from "@/lib/server/on-demand-sync";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
+import { AppError } from "@/lib/utils/api-errors";
 import { DATA_FRESHNESS_WARNING_THRESHOLD_MS } from "@/lib/utils/constants";
+import { isLocale, type Locale } from "@/lib/i18n/locale";
 import type {
   DataFreshnessStatus,
   CurrencyCode,
@@ -87,6 +89,7 @@ type UserRow = {
   watchlist: string[] | null;
   alerts_count: number | null;
   created_at: string | null;
+  locale?: string | null;
 };
 
 type UserAlertRow = {
@@ -202,6 +205,7 @@ function mapUserRow(row: UserRow): UserProfile {
     alertsCount,
     alertsLimit: ALERT_LIMITS[row.plan],
     createdAt: row.created_at ?? new Date().toISOString(),
+    locale: isLocale(row.locale) ? row.locale : "fr",
   };
 }
 
@@ -241,11 +245,12 @@ function buildDemoProfile(): UserProfile {
 }
 
 function buildProfileFromAuthUser(user: User): UserProfile {
+  const locale: Locale = isLocale(user.user_metadata?.locale) ? user.user_metadata.locale : "fr";
   const fullName =
     typeof user.user_metadata.full_name === "string" &&
     user.user_metadata.full_name.trim()
       ? user.user_metadata.full_name.trim()
-      : user.email ?? "Utilisateur MineAlert";
+      : user.email ?? (locale === "en" ? "MineAlert user" : "Utilisateur MineAlert");
 
   return {
     id: user.id,
@@ -256,7 +261,19 @@ function buildProfileFromAuthUser(user: User): UserProfile {
     alertsCount: 0,
     alertsLimit: ALERT_LIMITS.free,
     createdAt: user.created_at ?? new Date().toISOString(),
+    locale,
   };
+}
+
+function isMissingLocaleColumn(error: { message?: string; code?: string } | null): boolean {
+  if (!error) {
+    return false;
+  }
+
+  return (
+    /locale/i.test(error.message ?? "") &&
+    (error.code === "42703" || error.code === "PGRST204" || /column|schema cache/i.test(error.message ?? ""))
+  );
 }
 
 async function ensureUserProfileRow(
@@ -274,21 +291,28 @@ async function ensureUserProfileRow(
   }
 
   const fallbackProfile = buildProfileFromAuthUser(user);
-  const { data: createdRow, error: createError } = await client
+  const baseRow = {
+    id: user.id,
+    email: fallbackProfile.email,
+    full_name: fallbackProfile.fullName,
+    plan: fallbackProfile.plan,
+    watchlist: fallbackProfile.watchlist,
+    alerts_count: fallbackProfile.alertsCount,
+  };
+  let { data: createdRow, error: createError } = await client
     .from("users")
-    .upsert(
-      {
-        id: user.id,
-        email: fallbackProfile.email,
-        full_name: fallbackProfile.fullName,
-        plan: fallbackProfile.plan,
-        watchlist: fallbackProfile.watchlist,
-        alerts_count: fallbackProfile.alertsCount,
-      },
-      { onConflict: "id" }
-    )
+    .upsert({ ...baseRow, locale: fallbackProfile.locale }, { onConflict: "id" })
     .select("*")
     .single();
+
+  // Migration users_locale pas encore appliquée : on retente sans la colonne.
+  if (createError && isMissingLocaleColumn(createError)) {
+    ({ data: createdRow, error: createError } = await client
+      .from("users")
+      .upsert(baseRow, { onConflict: "id" })
+      .select("*")
+      .single());
+  }
 
   if (createError || !createdRow) {
     return fallbackProfile;
@@ -387,6 +411,32 @@ function buildDataFreshnessStatus(input: {
  */
 export function isDemoMode(): boolean {
   return !isSupabaseConfigured();
+}
+
+let localeColumnMissing = false;
+
+/**
+ * Aligne la langue des e-mails sur la langue d'interface utilisée (colonne users.locale, si la migration est appliquée).
+ */
+export async function syncUserLocale(profile: UserProfile, locale: Locale): Promise<UserProfile> {
+  if (!isSupabaseConfigured() || profile.locale === locale || localeColumnMissing) {
+    return { ...profile, locale };
+  }
+
+  try {
+    const { error } = await createSupabaseServerClient()
+      .from("users")
+      .update({ locale })
+      .eq("id", profile.id);
+
+    if (isMissingLocaleColumn(error)) {
+      localeColumnMissing = true;
+    }
+  } catch {
+    // Non bloquant : la langue d'interface prime.
+  }
+
+  return { ...profile, locale };
 }
 
 /**
@@ -697,19 +747,19 @@ export async function createUserAlert(input: CreateAlertInput): Promise<UserAler
   const alerts = await getUserAlerts();
 
   if (alerts.length >= ALERT_LIMITS[profile.plan]) {
-    throw new Error("Limite d'alertes atteinte pour votre plan actuel.");
+    throw new AppError("alert_limit_reached", "Limite d'alertes atteinte pour votre plan actuel.");
   }
 
   const mineral = await getMineralByIdOrSymbol(input.mineralId);
 
   if (!mineral) {
-    throw new Error("Minerai introuvable pour créer l'alerte.");
+    throw new AppError("mineral_not_found", "Minerai introuvable pour créer l'alerte.");
   }
 
   const keyword = input.keyword?.trim() || undefined;
 
   if (input.type === "news_keyword" && (!keyword || keyword.length < 3 || keyword.length > 60)) {
-    throw new Error("Le mot-clé doit contenir entre 3 et 60 caractères.");
+    throw new AppError("invalid_keyword", "Le mot-clé doit contenir entre 3 et 60 caractères.");
   }
 
   if (!isSupabaseConfigured()) {
@@ -747,7 +797,7 @@ export async function createUserAlert(input: CreateAlertInput): Promise<UserAler
     .single();
 
   if (error || !data) {
-    throw new Error("Impossible de créer l'alerte pour le moment.");
+    throw new AppError("alert_create_failed", "Impossible de créer l'alerte pour le moment.");
   }
 
   const row = data as UserAlertRow;
@@ -786,7 +836,7 @@ export async function deleteUserAlert(alertId: string): Promise<void> {
     .eq("user_id", profile.id);
 
   if (error) {
-    throw new Error("Suppression d'alerte indisponible.");
+    throw new AppError("alert_delete_failed", "Suppression d'alerte indisponible.");
   }
 }
 
@@ -826,7 +876,7 @@ export async function addMineralToWatchlist(
   const currentWatchlist = await getWatchlistMinerals();
 
   if (currentWatchlist.length >= WATCHLIST_LIMITS[profile.plan]) {
-    throw new Error("Limite de watchlist atteinte pour votre plan actuel.");
+    throw new AppError("watchlist_limit_reached", "Limite de watchlist atteinte pour votre plan actuel.");
   }
 
   if (!isSupabaseConfigured()) {
@@ -843,7 +893,7 @@ export async function addMineralToWatchlist(
   });
 
   if (error) {
-    throw new Error("Ajout à la watchlist indisponible.");
+    throw new AppError("watchlist_add_failed", "Ajout à la watchlist indisponible.");
   }
 }
 
@@ -869,7 +919,7 @@ export async function removeMineralFromWatchlist(
     .eq("mineral_id", input.mineralId);
 
   if (error) {
-    throw new Error("Suppression de la watchlist indisponible.");
+    throw new AppError("watchlist_remove_failed", "Suppression de la watchlist indisponible.");
   }
 }
 

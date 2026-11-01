@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
+import { localePath, safeInternalPath } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n/provider";
 import { Button } from "@/components/ui/Button";
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getAppUrl } from "@/lib/supabase/config";
@@ -46,9 +48,11 @@ function GoogleIcon(): JSX.Element {
  */
 export function GoogleAuthButton({
   redirectTo = "/dashboard",
-  label = "Continuer avec Google",
+  label,
   disabled = false,
 }: GoogleAuthButtonProps): JSX.Element {
+  const locale = useLocale();
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -59,11 +63,10 @@ export function GoogleAuthButton({
 
   const callbackUrl = useMemo(() => {
     const url = new URL(getAppUrl("/auth/callback"));
-    const safeRedirectTo =
-      redirectTo && redirectTo.startsWith("/") ? redirectTo : "/dashboard";
+    const safeRedirectTo = localePath(locale, safeInternalPath(redirectTo, "/dashboard"));
     url.searchParams.set("next", safeRedirectTo);
     return url.toString();
-  }, [redirectTo]);
+  }, [locale, redirectTo]);
 
   async function handleGoogleAuth() {
     setLoading(true);
@@ -89,10 +92,10 @@ export function GoogleAuthButton({
       const message =
         oauthError instanceof Error
           ? oauthError.message
-          : "Connexion Google indisponible pour le moment.";
+          : t("auth.googleUnavailable");
 
       if (message.toLowerCase().includes("provider")) {
-        setError("Google n'est pas encore active dans Supabase pour ce projet.");
+        setError(t("auth.googleDisabled"));
       } else {
         setError(message);
       }
@@ -114,7 +117,7 @@ export function GoogleAuthButton({
         onClick={() => void handleGoogleAuth()}
         className="border-slate-200 bg-white text-[#0A0A0A] hover:bg-slate-50"
       >
-        {label}
+        {label ?? t("auth.google")}
       </Button>
     </div>
   );

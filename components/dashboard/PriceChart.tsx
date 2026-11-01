@@ -12,7 +12,8 @@ import {
 } from "recharts";
 
 import { Card } from "@/components/ui/Card";
-import { formatDate, formatPrice } from "@/lib/utils/formatters";
+import { useLocale, useT } from "@/lib/i18n/provider";
+import { formatDate, formatPrice, intlLocale } from "@/lib/utils/formatters";
 import type { PriceHistory } from "@/types";
 
 type PriceChartProps = {
@@ -29,6 +30,8 @@ export function PriceChart({
   period,
   mineral,
 }: PriceChartProps): JSX.Element {
+  const locale = useLocale();
+  const t = useT();
   const [mounted, setMounted] = useState(false);
   const currency = data[0]?.currency === "EUR" ? "EUR" : "USD";
 
@@ -40,7 +43,7 @@ export function PriceChart({
     <Card variant="elevated" className="h-full">
       <Card.Header>
         <div>
-          <p className="text-sm font-medium text-slate-500">Évolution des prix</p>
+          <p className="text-sm font-medium text-slate-500">{t("chart.title")}</p>
           <h3 className="mt-1 text-lg font-semibold text-[#0A0A0A]">
             {mineral} · {period}
           </h3>
@@ -56,7 +59,7 @@ export function PriceChart({
                 <XAxis
                   dataKey="timestamp"
                   tickFormatter={(value) =>
-                    new Date(value).toLocaleDateString("fr-FR", {
+                    new Date(value).toLocaleDateString(intlLocale(locale), {
                       day: "2-digit",
                       month: "short",
                     })
@@ -64,7 +67,7 @@ export function PriceChart({
                   tick={{ fill: "#64748b", fontSize: 12 }}
                 />
                 <YAxis
-                  tickFormatter={(value) => formatPrice(Number(value ?? 0), currency)}
+                  tickFormatter={(value) => formatPrice(Number(value ?? 0), currency, locale)}
                   tick={{ fill: "#64748b", fontSize: 12 }}
                   width={90}
                 />
@@ -74,8 +77,8 @@ export function PriceChart({
                     borderColor: "#e2e8f0",
                     boxShadow: "0 18px 48px -24px rgba(15, 23, 42, 0.35)",
                   }}
-                  labelFormatter={(value) => formatDate(String(value))}
-                  formatter={(value) => formatPrice(Number(value ?? 0), currency)}
+                  labelFormatter={(value) => formatDate(String(value), locale)}
+                  formatter={(value) => formatPrice(Number(value ?? 0), currency, locale)}
                 />
                 <Line
                   type="monotone"

@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { localePath, safeInternalPath } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n/provider";
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -27,34 +30,34 @@ export function LoginForm({
   registered,
 }: LoginFormProps): JSX.Element {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useT();
   const supabaseEnabled = isSupabaseConfigured();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(
-    supabaseEnabled
-      ? null
-      : "Mode local de secours actif tant que Supabase n'est pas configure."
+    supabaseEnabled ? null : t("login.localMode")
   );
   const [loading, setLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   const safeRedirectTo = useMemo(
-    () => (redirectTo && redirectTo.startsWith("/") ? redirectTo : "/dashboard"),
-    [redirectTo]
+    () => localePath(locale, safeInternalPath(redirectTo, "/dashboard")),
+    [locale, redirectTo]
   );
 
   const calloutMessage = useMemo(() => {
     if (callbackError === "auth_callback_failed") {
-      return "Le lien de confirmation est invalide ou expire. Reconnectez-vous pour continuer.";
+      return t("login.callbackFailed");
     }
 
     if (registered === "1") {
-      return "Compte cree. Verifiez votre email puis revenez vous connecter.";
+      return t("login.registered");
     }
 
     return info;
-  }, [callbackError, info, registered]);
+  }, [callbackError, info, registered, t]);
 
   useEffect(() => {
     setHydrated(true);
@@ -70,14 +73,14 @@ export function LoginForm({
         if (email.trim() && password.trim().length >= 4) {
           localStorage.setItem(
             "minealert-demo-user",
-            JSON.stringify({ email, fullName: "Utilisateur local" })
+            JSON.stringify({ email, fullName: t("login.localUser") })
           );
-          setInfo("Connexion effectuee en mode local.");
-          router.push("/dashboard");
+          setInfo(t("login.localSuccess"));
+          router.push(localePath(locale, "/dashboard"));
           return;
         }
 
-        throw new Error("Impossible de se connecter. Verifiez vos identifiants.");
+        throw new Error(t("login.invalid"));
       }
 
       const supabase = createSupabaseBrowserClient();
@@ -96,7 +99,7 @@ export function LoginForm({
       setError(
         authError instanceof Error
           ? authError.message
-          : "Impossible de se connecter. Verifiez vos identifiants."
+          : t("login.invalid")
       );
     } finally {
       setLoading(false);
@@ -104,28 +107,25 @@ export function LoginForm({
   }
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] text-white">
+    <main className="relative min-h-screen bg-[#0A0A0A] text-white">
+      <div className="absolute right-4 top-4 z-10 sm:right-6 lg:right-8">
+        <LanguageSwitcher tone="dark" />
+      </div>
       <div className="container-shell grid min-h-screen items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
         <div className="space-y-6">
           <span className="inline-flex rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-1 text-sm text-[#D4AF37]">
-            Connexion MineAlert
+            {t("login.badge")}
           </span>
           <div className="space-y-4">
-            <h1 className="text-4xl font-semibold leading-tight">
-              Reprenez la main sur votre veille miniere.
-            </h1>
-            <p className="max-w-xl text-base leading-8 text-white/72">
-              Connectez-vous pour retrouver votre watchlist, vos alertes et votre lecture mondiale des metaux.
-            </p>
+            <h1 className="text-4xl font-semibold leading-tight">{t("login.title")}</h1>
+            <p className="max-w-xl text-base leading-8 text-white/72">{t("login.subtitle")}</p>
           </div>
         </div>
 
         <Card variant="gold" className="border-none bg-white text-[#0A0A0A]">
           <Card.Header className="mb-5 flex-col items-start gap-2">
-            <h2 className="text-2xl font-semibold">Connexion</h2>
-            <p className="text-sm text-slate-500">
-              Utilisez votre compte MineAlert pour retrouver vos alertes et votre watchlist.
-            </p>
+            <h2 className="text-2xl font-semibold">{t("login.cardTitle")}</h2>
+            <p className="text-sm text-slate-500">{t("login.cardSubtitle")}</p>
           </Card.Header>
 
           <Card.Body>
@@ -134,7 +134,7 @@ export function LoginForm({
                 <GoogleAuthButton redirectTo={safeRedirectTo} disabled={!hydrated} />
                 <div className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-slate-400">
                   <span className="h-px flex-1 bg-slate-200" />
-                  <span>ou</span>
+                  <span>{t("auth.or")}</span>
                   <span className="h-px flex-1 bg-slate-200" />
                 </div>
               </div>
@@ -145,35 +145,35 @@ export function LoginForm({
               {error ? <Alert variant="error">{error}</Alert> : null}
 
               <Input
-                label="Email"
+                label={t("auth.email")}
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="vous@entreprise.com"
+                placeholder={t("auth.emailPlaceholder")}
                 autoComplete="email"
                 required
               />
               <Input
-                label="Mot de passe"
+                label={t("auth.password")}
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="Votre mot de passe"
+                placeholder={t("login.passwordPlaceholder")}
                 autoComplete="current-password"
                 required
               />
 
               <Button type="submit" loading={loading} disabled={!hydrated} fullWidth>
-                Se connecter
+                {t("login.submit")}
               </Button>
             </form>
           </Card.Body>
 
           <Card.Footer className="justify-start">
             <p className="text-sm text-slate-600">
-              Pas encore de compte ?{" "}
-              <Link href="/register" className="font-medium text-[#1B4332]">
-                Creer un compte
+              {t("login.noAccount")}{" "}
+              <Link href={localePath(locale, "/register")} className="font-medium text-[#1B4332]">
+                {t("login.createAccount")}
               </Link>
             </p>
           </Card.Footer>

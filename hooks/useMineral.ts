@@ -4,7 +4,10 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
+import { useT } from "@/lib/i18n/provider";
+import type { TranslateFn } from "@/lib/i18n";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { readApiErrorMessage } from "@/lib/utils/api-errors";
 import { LIVE_PORTFOLIO_REFRESH_MS } from "@/lib/utils/constants";
 import type { ApiResponse, Mineral, PriceHistory } from "@/types";
 
@@ -204,7 +207,7 @@ async function fetchWatchlist(): Promise<Mineral[]> {
   }
 }
 
-async function addToWatchlist(input: WatchlistMutationInput): Promise<void> {
+async function addToWatchlist(input: WatchlistMutationInput, t: TranslateFn): Promise<void> {
   const response = await fetch("/api/watchlist", {
     method: "POST",
     headers: {
@@ -216,12 +219,12 @@ async function addToWatchlist(input: WatchlistMutationInput): Promise<void> {
 
   if (!response.ok) {
     throw new Error(
-      "Impossible d'ajouter ce minerai a la watchlist. Verifiez que l'API /api/watchlist est disponible."
+      (await readApiErrorMessage(response, t)) ?? t("hook.watchlistAdd")
     );
   }
 }
 
-async function removeFromWatchlist(input: WatchlistMutationInput): Promise<void> {
+async function removeFromWatchlist(input: WatchlistMutationInput, t: TranslateFn): Promise<void> {
   const response = await fetch("/api/watchlist", {
     method: "DELETE",
     headers: {
@@ -233,7 +236,7 @@ async function removeFromWatchlist(input: WatchlistMutationInput): Promise<void>
 
   if (!response.ok) {
     throw new Error(
-      "Impossible de retirer ce minerai de la watchlist. Verifiez que l'API /api/watchlist est disponible."
+      (await readApiErrorMessage(response, t)) ?? t("hook.watchlistRemove")
     );
   }
 }
@@ -258,6 +261,7 @@ export function useMineral(id: string) {
 
 export function useWatchlist() {
   const queryClient = useQueryClient();
+  const t = useT();
 
   const query = useQuery({
     queryKey: ["watchlist"],
@@ -268,14 +272,14 @@ export function useWatchlist() {
   });
 
   const addMutation = useMutation({
-    mutationFn: addToWatchlist,
+    mutationFn: (input: WatchlistMutationInput) => addToWatchlist(input, t),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["watchlist"] });
     },
   });
 
   const removeMutation = useMutation({
-    mutationFn: removeFromWatchlist,
+    mutationFn: (input: WatchlistMutationInput) => removeFromWatchlist(input, t),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["watchlist"] });
     },

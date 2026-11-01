@@ -1,11 +1,17 @@
 import "server-only";
 
+import { filingTitle } from "@/lib/data/filing-labels";
+import { mineralName } from "@/lib/data/minerals";
 import { sendMail } from "@/lib/email/sender";
+import { createT, localePath, type Locale } from "@/lib/i18n";
+import { getUserLocales } from "@/lib/server/user-locale";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { intlLocale } from "@/lib/utils/formatters";
 import { esc, safeHref } from "@/lib/utils/safe-html";
 
 const PRICE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_KEYWORD_HITS_PER_ALERT = 3;
+const MAX_FILINGS_SCANNED = 300;
 const HISTORY_MIN_AGE_MS = 20 * 60 * 60 * 1000;
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://mine-alert-kenams.vercel.app").replace(/\/$/, "");
 
@@ -36,8 +42,55 @@ type MineralRow = { id: string; name: string; symbol: string; current_price: num
 
 type EventDraft = { user_id: string; alert_id: string; title: string; body: string; url: string | null };
 
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: value >= 100 ? 0 : 2 }).format(value);
+type FilingScanRow = {
+  form: string;
+  items: string[] | null;
+  url: string;
+  mining_companies: { name: string; ticker: string | null } | Array<{ name: string; ticker: string | null }> | null;
+};
+
+function formatNumber(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: value >= 100 ? 0 : 2 }).format(value);
+}
+
+function formatSigned(change: number, locale: Locale): string {
+  const text = change.toFixed(1);
+  return `${change > 0 ? "+" : ""}${locale === "fr" ? text.replace(".", ",") : text}`;
+}
+
+function otherLocale(locale: Locale): Locale {
+  return locale === "fr" ? "en" : "fr";
+}
+
+/**
+ * Dépôts SEC dont le titre (français ou anglais), la société ou le ticker contient le mot-clé, insensible à la casse.
+ */
+function matchFilings(
+  rows: FilingScanRow[],
+  keyword: string,
+  locale: Locale
+): Array<{ title: string; url: string }> {
+  const needle = keyword.toLowerCase();
+  const matches: Array<{ title: string; url: string }> = [];
+
+  for (const row of rows) {
+    const company = Array.isArray(row.mining_companies) ? row.mining_companies[0] : row.mining_companies;
+    const name = company?.name ?? row.form;
+    const title = filingTitle(locale, name, row.form, row.items);
+    const haystack = [title, filingTitle(otherLocale(locale), name, row.form, row.items), name, company?.ticker ?? ""]
+      .join(" ")
+      .toLowerCase();
+
+    if (haystack.includes(needle)) {
+      matches.push({ title, url: row.url });
+
+      if (matches.length >= MAX_KEYWORD_HITS_PER_ALERT) {
+        break;
+      }
+    }
+  }
+
+  return matches;
 }
 
 /**
@@ -67,7 +120,8 @@ export async function computeChangePercent(
 }
 
 /**
- * Évalue toutes les alertes actives de tous les abonnés, crée les événements et envoie un e-mail récapitulatif par utilisateur.
+ * Évalue toutes les alertes actives de tous les abonnés, crée les événements et envoie un e-mail récapitulatif par utilisateur,
+ * dans la langue de l'utilisateur (français par défaut).
  */
 export async function runAlertSweep(): Promise<{ checked: number; events: number; emailed: number }> {
   const client = createAdminClient();
@@ -84,6 +138,26 @@ export async function runAlertSweep(): Promise<{ checked: number; events: number
   const alerts = alertData as AlertRow[];
   const { data: mineralData } = await client.from("minerals").select("id,name,symbol,current_price,last_updated");
   const minerals = new Map(((mineralData ?? []) as MineralRow[]).map((mineral) => [mineral.id, mineral]));
+  const userLocales = await getUserLocales(client, [...new Set(alerts.map((alert) => alert.user_id))]);
+  const localeOf = (userId: string): Locale => userLocales.get(userId) ?? "fr";
+  const filingScans = new Map<string, Promise<FilingScanRow[]>>();
+  const scanFilings = (since: string): Promise<FilingScanRow[]> => {
+    let scan = filingScans.get(since);
+
+    if (!scan) {
+      scan = Promise.resolve(
+        client
+          .from("regulatory_filings")
+          .select("form,items,url,filed_at,mining_companies(name,ticker)")
+          .gt("created_at", since)
+          .order("filed_at", { ascending: false })
+          .limit(MAX_FILINGS_SCANNED)
+      ).then(({ data }) => (data ?? []) as unknown as FilingScanRow[]);
+      filingScans.set(since, scan);
+    }
+
+    return scan;
+  };
   const drafts: EventDraft[] = [];
   const triggeredIds = new Set<string>();
   const now = Date.now();
@@ -91,6 +165,9 @@ export async function runAlertSweep(): Promise<{ checked: number; events: number
   for (const alert of alerts) {
     const mineral = minerals.get(alert.mineral_id);
     const last = alert.triggered_at ? Date.parse(alert.triggered_at) : null;
+    const locale = localeOf(alert.user_id);
+    const t = createT(locale);
+    const dashboardUrl = `${SITE_URL}${localePath(locale, "/dashboard/minerais")}`;
 
     if (alert.type === "news_keyword") {
       const keyword = alert.keyword?.trim();
@@ -101,14 +178,8 @@ export async function runAlertSweep(): Promise<{ checked: number; events: number
 
       const since = new Date(last ?? Date.parse(alert.created_at)).toISOString();
       const pattern = `%${keyword.replace(/[%_]/g, " ")}%`;
-      const [filings, news] = await Promise.all([
-        client
-          .from("regulatory_filings")
-          .select("title_fr,url,filed_at")
-          .gt("created_at", since)
-          .ilike("title_fr", pattern)
-          .order("filed_at", { ascending: false })
-          .limit(MAX_KEYWORD_HITS_PER_ALERT),
+      const [filingRows, news] = await Promise.all([
+        scanFilings(since),
         client
           .from("news_articles")
           .select("title,url")
@@ -118,13 +189,13 @@ export async function runAlertSweep(): Promise<{ checked: number; events: number
           .limit(MAX_KEYWORD_HITS_PER_ALERT),
       ]);
 
-      for (const filing of filings.data ?? []) {
+      for (const filing of matchFilings(filingRows, keyword, locale)) {
         drafts.push({
           user_id: alert.user_id,
           alert_id: alert.id,
-          title: `Dépôt réglementaire — « ${keyword} »`,
-          body: filing.title_fr as string,
-          url: filing.url as string,
+          title: t("email.filingKeywordTitle", { keyword }),
+          body: filing.title,
+          url: filing.url,
         });
         triggeredIds.add(alert.id);
       }
@@ -133,7 +204,7 @@ export async function runAlertSweep(): Promise<{ checked: number; events: number
         drafts.push({
           user_id: alert.user_id,
           alert_id: alert.id,
-          title: `Actualité — « ${keyword} »`,
+          title: t("email.newsKeywordTitle", { keyword }),
           body: article.title as string,
           url: article.url as string,
         });
@@ -157,23 +228,24 @@ export async function runAlertSweep(): Promise<{ checked: number; events: number
     }
 
     const price = mineral.current_price;
+    const name = mineralName(locale, mineral.symbol, mineral.name);
 
     if (alert.type === "price_above" && price > alert.threshold) {
       drafts.push({
         user_id: alert.user_id,
         alert_id: alert.id,
-        title: `${mineral.name} au-dessus de ${formatNumber(alert.threshold)} USD`,
-        body: `Cours observé : ${formatNumber(price)} USD.`,
-        url: `${SITE_URL}/dashboard/minerais`,
+        title: t("email.priceAbove", { mineral: name, threshold: formatNumber(alert.threshold, locale) }),
+        body: t("email.priceBody", { price: formatNumber(price, locale) }),
+        url: dashboardUrl,
       });
       triggeredIds.add(alert.id);
     } else if (alert.type === "price_below" && price < alert.threshold) {
       drafts.push({
         user_id: alert.user_id,
         alert_id: alert.id,
-        title: `${mineral.name} sous ${formatNumber(alert.threshold)} USD`,
-        body: `Cours observé : ${formatNumber(price)} USD.`,
-        url: `${SITE_URL}/dashboard/minerais`,
+        title: t("email.priceBelow", { mineral: name, threshold: formatNumber(alert.threshold, locale) }),
+        body: t("email.priceBody", { price: formatNumber(price, locale) }),
+        url: dashboardUrl,
       });
       triggeredIds.add(alert.id);
     } else if (alert.type === "change_percent") {
@@ -183,9 +255,12 @@ export async function runAlertSweep(): Promise<{ checked: number; events: number
         drafts.push({
           user_id: alert.user_id,
           alert_id: alert.id,
-          title: `${mineral.name} : ${change > 0 ? "+" : ""}${change.toFixed(1).replace(".", ",")} % en 24 h`,
-          body: `Variation supérieure à ${formatNumber(alert.threshold)} % (cours : ${formatNumber(price)} USD).`,
-          url: `${SITE_URL}/dashboard/minerais`,
+          title: t("email.changeTitle", { mineral: name, change: formatSigned(change, locale) }),
+          body: t("email.changeBody", {
+            threshold: formatNumber(alert.threshold, locale),
+            price: formatNumber(price, locale),
+          }),
+          url: dashboardUrl,
         });
         triggeredIds.add(alert.id);
       }
@@ -213,25 +288,31 @@ export async function runAlertSweep(): Promise<{ checked: number; events: number
 
   for (const user of (users ?? []) as Array<{ id: string; email: string }>) {
     const mine = drafts.filter((draft) => draft.user_id === user.id);
+    const locale = localeOf(user.id);
+    const t = createT(locale);
+    const countKey = mine.length > 1 ? "Plural" : "";
+    const subject = t(`email.alertsSubject${countKey}` as "email.alertsSubject", { n: mine.length });
+    const heading = t(`email.alertsHeading${countKey}` as "email.alertsHeading", { n: mine.length });
+    const dashboardAlertsUrl = `${SITE_URL}${localePath(locale, "/dashboard/alertes")}`;
     const lines = mine.map((draft) => `• ${draft.title}\n  ${draft.body}${draft.url ? `\n  ${draft.url}` : ""}`);
     const html = `<div style="font-family:Arial,sans-serif;line-height:1.6;max-width:560px">
-<h2 style="color:#1B4332">MineAlert : ${mine.length} alerte${mine.length > 1 ? "s" : ""} déclenchée${mine.length > 1 ? "s" : ""}</h2>
+<h2 style="color:#1B4332">${esc(heading)}</h2>
 ${mine
   .map(
     (draft) => {
       const href = safeHref(draft.url);
-      return `<p><strong>${esc(draft.title)}</strong><br/>${esc(draft.body)}${href ? `<br/><a href="${esc(href)}">Voir la source</a>` : ""}</p>`;
+      return `<p><strong>${esc(draft.title)}</strong><br/>${esc(draft.body)}${href ? `<br/><a href="${esc(href)}">${esc(t("email.viewSource"))}</a>` : ""}</p>`;
     }
   )
   .join("")}
-<p style="font-size:12px;color:#64748b">Information factuelle, pas un conseil en investissement. Gérez vos alertes dans <a href="${SITE_URL}/dashboard/alertes">votre tableau de bord</a>.</p></div>`;
+<p style="font-size:12px;color:#64748b">${esc(t("common.disclaimer"))} ${esc(t("email.manageAlerts"))} <a href="${esc(dashboardAlertsUrl)}">${esc(t("email.dashboardLink"))}</a>.</p></div>`;
 
     try {
       const result = await sendMail({
         to: user.email,
-        subject: `MineAlert : ${mine.length} alerte${mine.length > 1 ? "s" : ""} déclenchée${mine.length > 1 ? "s" : ""}`,
+        subject,
         html,
-        text: `${lines.join("\n")}\n\nInformation factuelle, pas un conseil en investissement.\n${SITE_URL}/dashboard/alertes`,
+        text: `${lines.join("\n")}\n\n${t("common.disclaimer")}\n${dashboardAlertsUrl}`,
       });
 
       if (result.sent) {

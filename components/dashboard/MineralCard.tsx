@@ -5,6 +5,8 @@ import { BellRing, Star, StarOff } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { mineralName } from "@/lib/data/minerals";
+import { useLocale, useT } from "@/lib/i18n/provider";
 import { MINERAL_CATEGORIES } from "@/lib/utils/constants";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -32,6 +34,8 @@ export function MineralCard({
   onAddWatchlist,
   onRemoveWatchlist,
 }: MineralCardProps): JSX.Element {
+  const locale = useLocale();
+  const t = useT();
   const categoryColor = MINERAL_CATEGORIES[mineral.category].color;
   const positive = mineral.priceChangePercent24h >= 0;
 
@@ -49,24 +53,24 @@ export function MineralCard({
             />
           </div>
           <h3 className="mt-2 text-xl font-semibold text-[#0A0A0A]">
-            {mineral.name}
+            {mineralName(locale, mineral.symbol, mineral.name)}
           </h3>
         </div>
 
-        <Badge variant="category">{formatMineralCategory(mineral.category)}</Badge>
+        <Badge variant="category">{formatMineralCategory(mineral.category, locale)}</Badge>
       </Card.Header>
 
       <Card.Body>
         <div className="space-y-2">
           <p className="text-3xl font-semibold text-[#0A0A0A]">
-            {formatPrice(mineral.currentPrice, mineral.currency)}
+            {formatPrice(mineral.currentPrice, mineral.currency, locale)}
           </p>
           <div className="flex items-center gap-2">
             <Badge variant={positive ? "positive" : "negative"}>
               {formatChange(mineral.priceChangePercent24h)}
             </Badge>
             <span className={cn("text-sm", positive ? "text-emerald-700" : "text-rose-700")}>
-              {formatPrice(mineral.priceChange24h, mineral.currency)}
+              {formatPrice(mineral.priceChange24h, mineral.currency, locale)}
             </span>
           </div>
         </div>
@@ -90,7 +94,7 @@ export function MineralCard({
           onClick={() => onCreateAlert?.(mineral)}
           fullWidth
         >
-          Créer alerte
+          {t("mineralCard.createAlert")}
         </Button>
         <Button
           variant="ghost"
@@ -112,7 +116,7 @@ export function MineralCard({
           }}
           fullWidth
         >
-          {isInWatchlist ? "Retirer" : "Ajouter"}
+          {isInWatchlist ? t("mineralCard.remove") : t("mineralCard.add")}
         </Button>
       </Card.Footer>
     </Card>

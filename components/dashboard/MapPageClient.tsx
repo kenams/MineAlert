@@ -4,6 +4,10 @@ import { useMemo, useState } from "react";
 
 import { WorldMap } from "@/components/dashboard/WorldMap";
 import { Card } from "@/components/ui/Card";
+import { countryLabel } from "@/lib/data/countries";
+import { newsMineralLabel } from "@/lib/data/minerals";
+import { useLocale, useT } from "@/lib/i18n/provider";
+import { formatMineStatus } from "@/lib/utils/formatters";
 import type { Mine } from "@/types";
 
 type MapPageClientProps = {
@@ -16,6 +20,8 @@ type MapPageClientProps = {
 export function MapPageClient({
   mines,
 }: MapPageClientProps): JSX.Element {
+  const locale = useLocale();
+  const t = useT();
   const [mineralFilter, setMineralFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<Mine["status"] | "all">("all");
   const [selectedMine, setSelectedMine] = useState<Mine | null>(mines[0] ?? null);
@@ -34,10 +40,10 @@ export function MapPageClient({
             onChange={(event) => setMineralFilter(event.target.value)}
             className="h-11 rounded-xl border border-slate-200 px-4 text-sm"
           >
-            <option value="">Tous les minerais</option>
+            <option value="">{t("map.allMinerals")}</option>
             {availableMinerals.map((mineral) => (
               <option key={mineral} value={mineral}>
-                {mineral}
+                {newsMineralLabel(locale, mineral)}
               </option>
             ))}
           </select>
@@ -49,11 +55,11 @@ export function MapPageClient({
             }
             className="h-11 rounded-xl border border-slate-200 px-4 text-sm"
           >
-            <option value="all">Tous les statuts</option>
-            <option value="active">Active</option>
-            <option value="exploration">Exploration</option>
-            <option value="suspended">Suspendue</option>
-            <option value="closed">Fermee</option>
+            <option value="all">{t("map.allStatuses")}</option>
+            <option value="active">{formatMineStatus("active", locale)}</option>
+            <option value="exploration">{formatMineStatus("exploration", locale)}</option>
+            <option value="suspended">{formatMineStatus("suspended", locale)}</option>
+            <option value="closed">{formatMineStatus("closed", locale)}</option>
           </select>
         </div>
 
@@ -68,9 +74,9 @@ export function MapPageClient({
       <Card variant="elevated">
         <Card.Header>
           <div>
-            <p className="text-sm font-medium text-slate-500">Fiche mine</p>
+            <p className="text-sm font-medium text-slate-500">{t("map.sheet")}</p>
             <h2 className="mt-1 text-xl font-semibold text-[#0A0A0A]">
-              {selectedMine?.name ?? "Selectionnez un point"}
+              {selectedMine?.name ?? t("map.selectPoint")}
             </h2>
           </div>
         </Card.Header>
@@ -80,21 +86,25 @@ export function MapPageClient({
               <p>{selectedMine.description}</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl bg-[#F8F9FA] p-4">
-                  <p className="text-slate-500">Societe</p>
+                  <p className="text-slate-500">{t("common.company")}</p>
                   <p className="mt-2 font-medium text-[#0A0A0A]">{selectedMine.company}</p>
                 </div>
                 <div className="rounded-2xl bg-[#F8F9FA] p-4">
-                  <p className="text-slate-500">Pays</p>
-                  <p className="mt-2 font-medium text-[#0A0A0A]">{selectedMine.country}</p>
-                </div>
-                <div className="rounded-2xl bg-[#F8F9FA] p-4">
-                  <p className="text-slate-500">Statut</p>
-                  <p className="mt-2 font-medium text-[#0A0A0A]">{selectedMine.status}</p>
-                </div>
-                <div className="rounded-2xl bg-[#F8F9FA] p-4">
-                  <p className="text-slate-500">Minerais</p>
+                  <p className="text-slate-500">{t("common.country")}</p>
                   <p className="mt-2 font-medium text-[#0A0A0A]">
-                    {selectedMine.minerals.join(", ")}
+                    {countryLabel(locale, selectedMine.country)}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-[#F8F9FA] p-4">
+                  <p className="text-slate-500">{t("map.status")}</p>
+                  <p className="mt-2 font-medium text-[#0A0A0A]">
+                    {formatMineStatus(selectedMine.status, locale)}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-[#F8F9FA] p-4">
+                  <p className="text-slate-500">{t("map.minerals")}</p>
+                  <p className="mt-2 font-medium text-[#0A0A0A]">
+                    {selectedMine.minerals.map((item) => newsMineralLabel(locale, item)).join(", ")}
                   </p>
                 </div>
               </div>

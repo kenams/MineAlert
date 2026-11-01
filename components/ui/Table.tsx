@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 
+import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils/cn";
 
 import { Spinner } from "./Spinner";
@@ -54,8 +55,9 @@ export function Table<T>({
   pageSize = 10,
   onRowClick,
   rowKey,
-  emptyMessage = "Aucune donnée disponible.",
+  emptyMessage,
 }: TableProps<T>): JSX.Element {
+  const t = useT();
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -199,7 +201,7 @@ export function Table<T>({
                   colSpan={columns.length}
                   className="px-4 py-8 text-center text-sm text-slate-500"
                 >
-                  {emptyMessage}
+                  {emptyMessage ?? t("common.tableEmpty")}
                 </td>
               </tr>
             ) : null}
@@ -240,7 +242,7 @@ export function Table<T>({
       {!loading && totalPages > 1 ? (
         <div className="flex items-center justify-between gap-3 text-sm text-slate-600">
           <span>
-            Page {Math.min(page, totalPages)} sur {totalPages}
+            {t("common.tablePage", { page: Math.min(page, totalPages), total: totalPages })}
           </span>
 
           <div className="flex items-center gap-2">
@@ -250,7 +252,7 @@ export function Table<T>({
               disabled={page <= 1}
               className="rounded-lg border border-slate-200 px-3 py-2 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Précédent
+              {t("common.prev")}
             </button>
             <button
               type="button"
@@ -260,7 +262,7 @@ export function Table<T>({
               disabled={page >= totalPages}
               className="rounded-lg border border-slate-200 px-3 py-2 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Suivant
+              {t("common.next")}
             </button>
           </div>
         </div>

@@ -5,6 +5,8 @@ import { BellRing, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { mineralName } from "@/lib/data/minerals";
+import { useLocale, useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils/cn";
 import {
   formatAlertType,
@@ -25,6 +27,8 @@ export function AlertCard({
   alert,
   onDelete,
 }: AlertCardProps): JSX.Element {
+  const locale = useLocale();
+  const t = useT();
   const currentPrice = alert.mineral?.currentPrice ?? 0;
   const progress =
     alert.threshold > 0
@@ -38,14 +42,16 @@ export function AlertCard({
           <div className="flex items-center gap-2">
             <BellRing className="h-4 w-4 text-[#1B4332]" />
             <p className="text-sm font-semibold text-[#0A0A0A]">
-              {alert.mineral?.name ?? "Minerai"}
+              {alert.mineral
+                ? mineralName(locale, alert.mineral.symbol, alert.mineral.name)
+                : t("alertCard.fallbackMineral")}
             </p>
           </div>
-          <p className="mt-1 text-sm text-slate-500">{formatAlertType(alert.type)}</p>
+          <p className="mt-1 text-sm text-slate-500">{formatAlertType(alert.type, locale)}</p>
         </div>
 
         <Badge variant={alert.isActive ? "positive" : "neutral"}>
-          {alert.isActive ? "Active" : "Pause"}
+          {alert.isActive ? t("alertCard.active") : t("alertCard.paused")}
         </Badge>
       </Card.Header>
 
@@ -53,21 +59,23 @@ export function AlertCard({
         <div className="space-y-2 text-sm text-slate-600">
           {alert.type === "news_keyword" ? (
             <p>
-              Mot-clé :{" "}
-              <strong className="text-[#0A0A0A]">« {alert.keyword ?? "—"} »</strong>
+              {t("alertCard.keyword")}{" "}
+              <strong className="text-[#0A0A0A]">
+                {locale === "en" ? `"${alert.keyword ?? "—"}"` : `« ${alert.keyword ?? "—"} »`}
+              </strong>
             </p>
           ) : (
             <p>
-              Seuil :{" "}
+              {t("alertCard.threshold")}{" "}
               <strong className="text-[#0A0A0A]">
-                {formatPrice(alert.threshold, alert.currency)}
+                {formatPrice(alert.threshold, alert.currency, locale)}
               </strong>
             </p>
           )}
           <p>
-            Prix actuel :{" "}
+            {t("alertCard.currentPrice")}{" "}
             <strong className="text-[#0A0A0A]">
-              {formatPrice(currentPrice, alert.currency)}
+              {formatPrice(currentPrice, alert.currency, locale)}
             </strong>
           </p>
         </div>
@@ -82,15 +90,15 @@ export function AlertCard({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-xs text-slate-500">{progress.toFixed(0)}% vers le seuil</p>
+          <p className="text-xs text-slate-500">{t("alertCard.progress", { pct: progress.toFixed(0) })}</p>
         </div>
 
         {alert.triggeredAt ? (
           <p className="text-xs text-slate-500">
-            Dernier déclenchement : {formatDate(alert.triggeredAt)}
+            {t("alertCard.lastTriggered", { date: formatDate(alert.triggeredAt, locale) })}
           </p>
         ) : (
-          <p className="text-xs text-slate-500">Aucun déclenchement récent.</p>
+          <p className="text-xs text-slate-500">{t("alertCard.neverTriggered")}</p>
         )}
       </Card.Body>
 
@@ -101,7 +109,7 @@ export function AlertCard({
           icon={<Trash2 className="h-4 w-4" />}
           onClick={() => onDelete?.(alert.id)}
         >
-          Supprimer
+          {t("alertCard.delete")}
         </Button>
       </Card.Footer>
     </Card>

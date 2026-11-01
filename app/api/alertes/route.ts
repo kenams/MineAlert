@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { UnauthorizedError } from "@/lib/server/auth";
+import { AppError } from "@/lib/utils/api-errors";
 import {
   createUserAlert,
   deleteUserAlert,
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       !body.currency
     ) {
       return NextResponse.json(
-        { success: false, data: null, error: "Payload de création invalide." },
+        { success: false, data: null, error: "Payload de création invalide.", code: "invalid_payload" },
         { status: 400 }
       );
     }
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           error instanceof Error
             ? error.message
             : "Impossible de créer l'alerte.",
+        code: error instanceof AppError ? error.code : undefined,
       },
       { status: 400 }
     );
@@ -121,6 +123,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
           error instanceof Error
             ? error.message
             : "Impossible de supprimer l'alerte.",
+        code: error instanceof AppError ? error.code : undefined,
       },
       { status: 400 }
     );

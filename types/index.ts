@@ -139,6 +139,8 @@ export type UserProfile = {
   alertsCount: number;
   alertsLimit: number;
   createdAt: string;
+  /** Langue des e-mails et de l'interface (absente avant la migration users_locale : français). */
+  locale?: "fr" | "en";
 };
 
 /**
