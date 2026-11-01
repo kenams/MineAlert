@@ -17,7 +17,8 @@ jobs:
       - name: Run scheduled jobs (SEC filings, country risk, alerts, digest)
         env:
           JOBS_TICK_TOKEN: ${{ secrets.JOBS_TICK_TOKEN }}
-        run: curl -fsS --max-time 90 -H "Authorization: Bearer $JOBS_TICK_TOKEN" https://mine-alert-kenams.vercel.app/api/jobs/tick
+        run: |
+          curl -fsS --max-time 90 -H "Authorization: Bearer $JOBS_TICK_TOKEN" https://mine-alert-kenams.vercel.app/api/jobs/tick
       - name: Check freshness
         run: |
           curl -fsS --max-time 30 https://mine-alert-kenams.vercel.app/api/system/status | tee status.json
