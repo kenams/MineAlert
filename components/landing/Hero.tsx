@@ -7,6 +7,7 @@ import { getMinerals, isDemoMode } from "@/lib/server/data";
 import type { Mineral } from "@/types";
 
 const HERO_SYMBOLS = ["XAU", "CU"] as const;
+const MAX_QUOTE_AGE_MS = 48 * 60 * 60 * 1000;
 
 function formatUsd(value: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -32,7 +33,8 @@ export async function Hero(): Promise<JSX.Element> {
   const demo = isDemoMode();
   const minerals = await getMinerals();
   const quotes = HERO_SYMBOLS.map((symbol) => minerals.find((m: Mineral) => m.symbol === symbol)).filter(
-    (m): m is Mineral => Boolean(m && m.currentPrice > 0)
+    (m): m is Mineral =>
+      Boolean(m && m.currentPrice > 0 && (demo || Date.now() - Date.parse(m.lastUpdated) < MAX_QUOTE_AGE_MS))
   );
 
   return (
