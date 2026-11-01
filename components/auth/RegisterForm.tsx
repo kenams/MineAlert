@@ -183,7 +183,16 @@ export function RegisterForm(): JSX.Element {
                   onChange={(event) => setAcceptedTerms(event.target.checked)}
                   className="mt-1 h-4 w-4 rounded border-slate-300 text-[#1B4332]"
                 />
-                <span>{t("register.terms")}</span>
+                <span>
+                  {t("register.terms")}{" "}
+                  <Link href={localePath(locale, "/terms")} target="_blank" className="underline">
+                    {t("footer.terms")}
+                  </Link>
+                  {" · "}
+                  <Link href={localePath(locale, "/privacy")} target="_blank" className="underline">
+                    {t("footer.privacy")}
+                  </Link>
+                </span>
               </label>
 
               <Button type="submit" loading={loading} disabled={!hydrated} fullWidth>
