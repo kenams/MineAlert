@@ -2,10 +2,12 @@ import type { LucideIcon } from "lucide-react";
 import {
   BellRing,
   Gem,
+  FileText,
   Globe2,
   LayoutDashboard,
   Map,
   Settings,
+  ShieldAlert,
   ShieldCheck,
   UserCircle2,
 } from "lucide-react";
@@ -24,6 +26,8 @@ export const MAIN_NAV_ITEMS: readonly LayoutNavItem[] = [
   { href: "/dashboard/minerais", label: "Minerais", icon: Gem },
   { href: "/dashboard/actualites", label: "Actualités", icon: Globe2 },
   { href: "/dashboard/alertes", label: "Alertes", icon: BellRing },
+  { href: "/dashboard/depots", label: "Dépôts SEC", icon: FileText },
+  { href: "/dashboard/risque-pays", label: "Risque pays", icon: ShieldAlert },
   { href: "/dashboard/carte", label: "Carte mondiale", icon: Map },
 ] as const;
 

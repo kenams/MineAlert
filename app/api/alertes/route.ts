@@ -42,6 +42,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       type?: UserAlert["type"];
       threshold?: number;
       currency?: CurrencyCode;
+      keyword?: string;
     };
 
     if (
@@ -61,6 +62,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       type: body.type,
       threshold: body.threshold,
       currency: body.currency,
+      keyword: typeof body.keyword === "string" ? body.keyword : undefined,
     });
 
     return NextResponse.json({ success: true, data: alert }, { status: 201 });

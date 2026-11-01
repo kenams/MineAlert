@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Wake the landing page (ISR + on-demand sync)
         run: curl -fsS --max-time 60 https://mine-alert-kenams.vercel.app/ -o /dev/null
+      - name: Run scheduled jobs (SEC filings, country risk, alerts, digest)
+        run: curl -fsS --max-time 90 https://mine-alert-kenams.vercel.app/api/jobs/tick
       - name: Check freshness
         run: |
           curl -fsS --max-time 30 https://mine-alert-kenams.vercel.app/api/system/status | tee status.json

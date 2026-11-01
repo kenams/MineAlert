@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AlertCard } from "@/components/dashboard/AlertCard";
@@ -22,9 +23,10 @@ export default function AlertsPage(): JSX.Element {
   const [open, setOpen] = useState(false);
   const [selectedMineralId, setSelectedMineralId] = useState("");
   const [threshold, setThreshold] = useState("");
-  const [type, setType] = useState<"price_above" | "price_below" | "change_percent">(
-    "price_above"
-  );
+  const [type, setType] = useState<
+    "price_above" | "price_below" | "change_percent" | "news_keyword"
+  >("price_above");
+  const [keyword, setKeyword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const usage = Math.min(100, (alerts.length / ALERT_LIMITS.free) * 100);
@@ -48,6 +50,11 @@ export default function AlertsPage(): JSX.Element {
       return;
     }
 
+    if (type === "news_keyword") {
+      setThreshold("0");
+      return;
+    }
+
     if (type === "change_percent") {
       setThreshold("2");
       return;
@@ -63,6 +70,12 @@ export default function AlertsPage(): JSX.Element {
       return "Sélectionnez un minerai pour prévisualiser l'alerte.";
     }
 
+    if (type === "news_keyword") {
+      return keyword.trim().length >= 3
+        ? `Vous serez alerté dès qu'une actualité ou un dépôt réglementaire d'une société minière contient « ${keyword.trim()} ».`
+        : "Saisissez un mot-clé (3 caractères minimum), par exemple le nom d'une société ou d'un projet.";
+    }
+
     if (type === "price_above") {
       return `Vous serez alerté quand ${selectedMineral.name} dépassera ${threshold}.`;
     }
@@ -72,7 +85,7 @@ export default function AlertsPage(): JSX.Element {
     }
 
     return `Vous serez alerté quand ${selectedMineral.name} variera de plus de ${threshold}%.`;
-  }, [selectedMineral, threshold, type]);
+  }, [selectedMineral, threshold, type, keyword]);
 
   async function handleCreateAlert() {
     setError(null);
@@ -82,12 +95,18 @@ export default function AlertsPage(): JSX.Element {
       return;
     }
 
+    if (type === "news_keyword" && keyword.trim().length < 3) {
+      setError("Le mot-clé doit contenir au moins 3 caractères.");
+      return;
+    }
+
     try {
       await create({
         mineralId: selectedMineralId,
         threshold: Number(threshold),
         type,
         currency: "USD",
+        keyword: type === "news_keyword" ? keyword.trim() : undefined,
       });
       setOpen(false);
     } catch (creationError) {
@@ -110,7 +129,15 @@ export default function AlertsPage(): JSX.Element {
             </p>
           </div>
 
-          <Button onClick={() => setOpen(true)}>Nouvelle alerte</Button>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/dashboard/alertes/historique"
+              className="inline-flex h-11 items-center rounded-xl border border-slate-200 px-4 text-sm font-medium text-[#0A0A0A] hover:bg-slate-50"
+            >
+              Historique des alertes
+            </Link>
+            <Button onClick={() => setOpen(true)}>Nouvelle alerte</Button>
+          </div>
         </div>
 
         <div className="mt-5 space-y-2">
@@ -198,7 +225,11 @@ export default function AlertsPage(): JSX.Element {
                 value={type}
                 onChange={(event) =>
                   setType(
-                    event.target.value as "price_above" | "price_below" | "change_percent"
+                    event.target.value as
+                      | "price_above"
+                      | "price_below"
+                      | "change_percent"
+                      | "news_keyword"
                   )
                 }
                 className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm"
@@ -206,21 +237,32 @@ export default function AlertsPage(): JSX.Element {
                 <option value="price_above">Prix dépasse</option>
                 <option value="price_below">Prix passe sous</option>
                 <option value="change_percent">Variation %</option>
+                <option value="news_keyword">Mot-clé (actualités et dépôts SEC)</option>
               </select>
             </div>
           </div>
 
-          <Input
-            label="Seuil"
-            type="number"
-            value={threshold}
-            onChange={(event) => setThreshold(event.target.value)}
-            hint={
-              type === "change_percent"
-                ? "Pourcentage de variation déclenchant l'alerte."
-                : "Prix cible en USD pour ce minerai."
-            }
-          />
+          {type === "news_keyword" ? (
+            <Input
+              label="Mot-clé"
+              value={keyword}
+              maxLength={60}
+              onChange={(event) => setKeyword(event.target.value)}
+              hint="Nom de société, de projet ou de pays. Insensible à la casse."
+            />
+          ) : (
+            <Input
+              label="Seuil"
+              type="number"
+              value={threshold}
+              onChange={(event) => setThreshold(event.target.value)}
+              hint={
+                type === "change_percent"
+                  ? "Pourcentage de variation déclenchant l'alerte."
+                  : "Prix cible en USD pour ce minerai."
+              }
+            />
+          )}
 
           <Alert variant="info">{preview}</Alert>
         </div>

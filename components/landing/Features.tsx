@@ -4,21 +4,21 @@ import { Card } from "@/components/ui/Card";
 
 const FEATURES = [
   {
-    title: "Veille mondiale",
+    title: "Dépôts SEC en français",
     description:
-      "Agrégation de flux miniers, métaux et commodities pour détecter les signaux utiles plus vite.",
+      "Résultats, financements, accords, changements de dirigeants : les dépôts officiels de 41 sociétés minières, classés et résumés en français, avec le lien vers la source.",
     icon: Globe2,
   },
   {
-    title: "Alertes ciblées",
+    title: "Alertes qui arrivent vraiment",
     description:
-      "Seuils de prix, variations, événements et signaux clés pour ne suivre que ce qui compte.",
+      "Seuil de prix, variation sur 24 h ou mot-clé dans une actualité ou un dépôt SEC : vérifiées toutes les 10 minutes, envoyées par e-mail.",
     icon: BellRing,
   },
   {
-    title: "Vue de synthèse",
+    title: "Risque pays",
     description:
-      "Dashboard clair avec watchlist, graphiques, carte mondiale des mines et actualités filtrées.",
+      "Stabilité politique, État de droit et efficacité de l'État dans 40 pays miniers (Banque mondiale), pour situer le risque derrière un projet.",
     icon: Layers3,
   },
 ];

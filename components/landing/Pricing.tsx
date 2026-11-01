@@ -7,23 +7,26 @@ const PLANS = [
   {
     name: "Gratuit",
     price: "0€",
-    description: "Découvrir MineAlert sans friction.",
-    features: ["5 alertes", "10 minerais suivis", "Veille mondiale"],
+    description: "Pour suivre le marché et tester les alertes.",
+    features: [
+      "5 alertes (prix, variation 24 h, mot-clé)",
+      "Dépôts SEC de 41 sociétés minières en français",
+      "Fiche risque pays (40 pays)",
+      "Cours en direct : or, argent, platine, cuivre",
+    ],
     highlight: false,
   },
   {
     name: "Pro",
     price: "9,99€/mois",
-    description: "Pour les investisseurs qui veulent aller plus vite.",
-    features: ["50 alertes", "100 minerais", "Exports et historique enrichi"],
+    description: "Pour ne rien manquer sans surveiller l'écran.",
+    features: [
+      "Tout le plan Gratuit",
+      "50 alertes",
+      "Résumé quotidien par e-mail en français",
+      "Cours, dépôts marquants et actualités à 7 h",
+    ],
     highlight: true,
-  },
-  {
-    name: "Business",
-    price: "49€/mois",
-    description: "Pour les équipes, desks matières premières et analystes.",
-    features: ["500 alertes", "API access", "Multi-utilisateurs et rapport PDF"],
-    highlight: false,
   },
 ];
 
@@ -42,7 +45,7 @@ export function Pricing(): JSX.Element {
         </h2>
       </div>
 
-      <div className="mt-12 grid gap-5 lg:grid-cols-3">
+      <div className="mx-auto mt-12 grid max-w-3xl gap-5 lg:grid-cols-2">
         {PLANS.map((plan) => (
           <Card
             key={plan.name}

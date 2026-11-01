@@ -50,7 +50,7 @@ export async function Hero(): Promise<JSX.Element> {
               Surveillez les marchés miniers mondiaux sans bruit inutile.
             </h1>
             <p className="max-w-2xl text-lg leading-8 text-white/72">
-              Prix des métaux, actualités stratégiques, alertes intelligentes et vision mondiale des mines dans une seule interface.
+              Cours des métaux, dépôts réglementaires des sociétés minières traduits en français, risque pays et alertes par e-mail : l'information utile aux petits porteurs, sans le prix d'un terminal.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -66,9 +66,9 @@ export async function Hero(): Promise<JSX.Element> {
             </Link>
           </div>
           <div className="flex flex-wrap gap-6 text-sm text-white/65">
-            <span>20+ minerais</span>
-            <span>5 flux mondiaux</span>
-            <span>Alertes temps réel</span>
+            <span>41 sociétés minières suivies</span>
+            <span>Dépôts SEC en français</span>
+            <span>Alertes par e-mail</span>
           </div>
         </div>
 

@@ -51,12 +51,19 @@ export function AlertCard({
 
       <Card.Body>
         <div className="space-y-2 text-sm text-slate-600">
-          <p>
-            Seuil :{" "}
-            <strong className="text-[#0A0A0A]">
-              {formatPrice(alert.threshold, alert.currency)}
-            </strong>
-          </p>
+          {alert.type === "news_keyword" ? (
+            <p>
+              Mot-clé :{" "}
+              <strong className="text-[#0A0A0A]">« {alert.keyword ?? "—"} »</strong>
+            </p>
+          ) : (
+            <p>
+              Seuil :{" "}
+              <strong className="text-[#0A0A0A]">
+                {formatPrice(alert.threshold, alert.currency)}
+              </strong>
+            </p>
+          )}
           <p>
             Prix actuel :{" "}
             <strong className="text-[#0A0A0A]">

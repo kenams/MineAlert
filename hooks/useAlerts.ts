@@ -13,6 +13,7 @@ export type CreateAlertInput = {
   type: UserAlert["type"];
   threshold: number;
   currency: CurrencyCode;
+  keyword?: string;
 };
 
 export type DeleteAlertInput = {

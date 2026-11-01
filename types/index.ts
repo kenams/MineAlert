@@ -121,6 +121,7 @@ export type UserAlert = {
   currency: CurrencyCode;
   isActive: boolean;
   triggeredAt?: string;
+  keyword?: string;
   createdAt: string;
 };
 

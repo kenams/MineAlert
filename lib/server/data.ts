@@ -97,6 +97,7 @@ type UserAlertRow = {
   currency: string | null;
   is_active: boolean | null;
   triggered_at: string | null;
+  keyword?: string | null;
   created_at: string | null;
 };
 
@@ -121,6 +122,7 @@ export type CreateAlertInput = {
   type: UserAlert["type"];
   threshold: number;
   currency: CurrencyCode;
+  keyword?: string;
 };
 
 export type CreateWatchlistInput = {
@@ -678,6 +680,7 @@ export async function getUserAlerts(): Promise<UserAlert[]> {
     currency: alert.currency === "EUR" ? "EUR" : "USD",
     isActive: alert.is_active ?? true,
     triggeredAt: alert.triggered_at ?? undefined,
+    keyword: alert.keyword ?? undefined,
     createdAt: alert.created_at ?? new Date().toISOString(),
     mineral:
       minerals.find((mineral) => mineral.id === alert.mineral_id) ?? undefined,
@@ -701,6 +704,12 @@ export async function createUserAlert(input: CreateAlertInput): Promise<UserAler
     throw new Error("Minerai introuvable pour créer l'alerte.");
   }
 
+  const keyword = input.keyword?.trim() || undefined;
+
+  if (input.type === "news_keyword" && (!keyword || keyword.length < 3 || keyword.length > 60)) {
+    throw new Error("Le mot-clé doit contenir entre 3 et 60 caractères.");
+  }
+
   if (!isSupabaseConfigured()) {
     const alert: UserAlert = {
       id: randomUUID(),
@@ -712,6 +721,7 @@ export async function createUserAlert(input: CreateAlertInput): Promise<UserAler
       threshold: input.threshold,
       currency: input.currency,
       isActive: true,
+      keyword,
       createdAt: new Date().toISOString(),
     };
 
@@ -729,6 +739,7 @@ export async function createUserAlert(input: CreateAlertInput): Promise<UserAler
       threshold: input.threshold,
       currency: input.currency,
       is_active: true,
+      keyword: input.type === "news_keyword" ? keyword : null,
     })
     .select("*")
     .single();
@@ -750,6 +761,7 @@ export async function createUserAlert(input: CreateAlertInput): Promise<UserAler
     currency: row.currency === "EUR" ? "EUR" : "USD",
     isActive: row.is_active ?? true,
     triggeredAt: row.triggered_at ?? undefined,
+    keyword: row.keyword ?? undefined,
     createdAt: row.created_at ?? new Date().toISOString(),
   };
 }
