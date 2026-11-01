@@ -101,14 +101,16 @@ export async function Hero(): Promise<JSX.Element> {
                     <div key={mineral.symbol} className="rounded-2xl bg-white p-4 shadow-sm">
                       <p className="text-sm text-slate-500">{mineral.name}</p>
                       <p className="mt-2 text-2xl font-semibold">{formatUsd(mineral.currentPrice)}</p>
-                      <p
-                        className={`mt-2 text-sm ${
-                          mineral.priceChangePercent24h >= 0 ? "text-emerald-700" : "text-red-700"
-                        }`}
-                      >
-                        {mineral.priceChangePercent24h >= 0 ? "+" : ""}
-                        {mineral.priceChangePercent24h.toFixed(2)}% sur 24h
-                      </p>
+                      {mineral.priceChangePercent24h !== 0 && (
+                        <p
+                          className={`mt-2 text-sm ${
+                            mineral.priceChangePercent24h > 0 ? "text-emerald-700" : "text-red-700"
+                          }`}
+                        >
+                          {mineral.priceChangePercent24h > 0 ? "+" : ""}
+                          {mineral.priceChangePercent24h.toFixed(2)}% sur 24h
+                        </p>
+                      )}
                       <p className="mt-1 text-xs text-slate-400">
                         {demo ? "Exemple" : formatAge(mineral.lastUpdated)}
                       </p>
