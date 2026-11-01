@@ -1,11 +1,10 @@
-import { load } from "cheerio";
-
 import type { Mineral } from "@/types";
 
 type ExtractedPrice = {
   currentPrice: number;
   previousClose?: number | null;
   currency?: string | null;
+  quoteTime?: string | null;
 };
 
 type PriceSource = {
@@ -16,10 +15,11 @@ type PriceSource = {
 };
 
 type MetalPriceTarget = {
-  symbol: "XAU" | "XAG" | "XPT" | "CU";
+  symbol: "XAU" | "XAG" | "XPT" | "CU" | "U";
   name: string;
   currency: "USD";
-  fallbackPrice: number;
+  /** Plage de prix plausible : toute valeur hors plage est rejetée comme erreur de source. */
+  band: readonly [number, number];
   sources: readonly PriceSource[];
 };
 
@@ -53,6 +53,7 @@ type MetalRunLog = {
 
 type YahooChartMeta = {
   currency?: string;
+  regularMarketTime?: number;
   regularMarketPrice?: number;
   previousClose?: number;
   chartPreviousClose?: number;
@@ -70,96 +71,30 @@ const SCRAPER_USER_AGENT = "MineAlertBot/1.0";
 const FETCH_TIMEOUT_MS = 8000;
 const METAL_LOG_SOURCE = "free-market-data";
 
-const STOOQ_VALUE_SELECTORS = [
-  "#aq_x_l",
-  "#aq_h_l",
-  "span#aq_x_l",
-  "span#aq_h_l",
-  "td#aq_x_l",
-  "td#aq_h_l",
-] as const;
+const YAHOO = (symbol: string): PriceSource => ({
+  name: "yahoo-finance",
+  url: `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`,
+  responseType: "json",
+  parser: extractPriceFromYahooChart,
+});
 
+const GOLD_API = (symbol: string): PriceSource => ({
+  name: "gold-api",
+  url: `https://api.gold-api.com/price/${symbol}`,
+  responseType: "json",
+  parser: extractPriceFromGoldApi,
+});
+
+/**
+ * Cours indicatifs : contrats à terme COMEX/NYMEX/CME (Yahoo Finance), avec le spot gold-api.com en secours pour les métaux précieux.
+ * Aucun prix de repli codé en dur : si aucune source valide ne répond, le minerai n'est pas mis à jour.
+ */
 const METAL_TARGETS: readonly MetalPriceTarget[] = [
-  {
-    symbol: "XAU",
-    name: "Or",
-    currency: "USD",
-    fallbackPrice: 1950,
-    sources: [
-      {
-        name: "yahoo-finance",
-        url: "https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1m&range=1d",
-        responseType: "json",
-        parser: extractPriceFromYahooChart,
-      },
-      {
-        name: "stooq",
-        url: "https://stooq.com/q/l/?s=xauusd",
-        responseType: "text",
-        parser: extractPriceFromStooqDocument,
-      },
-    ],
-  },
-  {
-    symbol: "XAG",
-    name: "Argent",
-    currency: "USD",
-    fallbackPrice: 23.5,
-    sources: [
-      {
-        name: "yahoo-finance",
-        url: "https://query1.finance.yahoo.com/v8/finance/chart/SI=F?interval=1m&range=1d",
-        responseType: "json",
-        parser: extractPriceFromYahooChart,
-      },
-      {
-        name: "stooq",
-        url: "https://stooq.com/q/l/?s=xagusd",
-        responseType: "text",
-        parser: extractPriceFromStooqDocument,
-      },
-    ],
-  },
-  {
-    symbol: "XPT",
-    name: "Platine",
-    currency: "USD",
-    fallbackPrice: 950,
-    sources: [
-      {
-        name: "yahoo-finance",
-        url: "https://query1.finance.yahoo.com/v8/finance/chart/PL=F?interval=1m&range=1d",
-        responseType: "json",
-        parser: extractPriceFromYahooChart,
-      },
-      {
-        name: "stooq",
-        url: "https://stooq.com/q/l/?s=xptusd",
-        responseType: "text",
-        parser: extractPriceFromStooqDocument,
-      },
-    ],
-  },
-  {
-    symbol: "CU",
-    name: "Cuivre",
-    currency: "USD",
-    fallbackPrice: 3.85,
-    sources: [
-      {
-        name: "yahoo-finance",
-        url: "https://query1.finance.yahoo.com/v8/finance/chart/HG=F?interval=1m&range=1d",
-        responseType: "json",
-        parser: extractPriceFromYahooChart,
-      },
-      {
-        name: "stooq",
-        url: "https://stooq.com/q/l/?s=hgusx",
-        responseType: "text",
-        parser: extractPriceFromStooqDocument,
-      },
-    ],
-  },
+  { symbol: "XAU", name: "Or", currency: "USD", band: [500, 20000], sources: [YAHOO("GC=F"), GOLD_API("XAU")] },
+  { symbol: "XAG", name: "Argent", currency: "USD", band: [5, 500], sources: [YAHOO("SI=F"), GOLD_API("XAG")] },
+  { symbol: "XPT", name: "Platine", currency: "USD", band: [300, 10000], sources: [YAHOO("PL=F"), GOLD_API("XPT")] },
+  { symbol: "CU", name: "Cuivre", currency: "USD", band: [1, 30], sources: [YAHOO("HG=F")] },
+  { symbol: "U", name: "Uranium", currency: "USD", band: [5, 500], sources: [YAHOO("UX=F")] },
 ] as const;
 
 function logMetalRun(payload: MetalRunLog): void {
@@ -207,13 +142,6 @@ async function fetchSourcePayload(
   }
 }
 
-function parseNumericValue(rawValue: string): number | null {
-  const normalized = rawValue.replace(/\s+/g, "").replace(",", ".");
-  const parsedValue = Number(normalized);
-
-  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : null;
-}
-
 function normalizeCurrency(rawValue: string | null | undefined): Mineral["currency"] {
   return rawValue === "EUR" ? "EUR" : "USD";
 }
@@ -246,85 +174,27 @@ function extractPriceFromYahooChart(payload: unknown): ExtractedPrice | null {
     currentPrice,
     previousClose: previousCloseCandidate,
     currency: meta.currency ?? null,
+    quoteTime:
+      typeof meta.regularMarketTime === "number" && meta.regularMarketTime > 0
+        ? new Date(meta.regularMarketTime * 1000).toISOString()
+        : null,
   };
 }
 
-function extractPriceFromStooqCsv(document: string): number | null {
-  const firstLine = document.trim().split(/\r?\n/, 1)[0] ?? "";
-  const parts = firstLine.split(",").map((part) => part.trim());
+function extractPriceFromGoldApi(payload: unknown): ExtractedPrice | null {
+  const body = payload as { price?: unknown; currency?: unknown; updatedAt?: unknown };
 
-  if (parts.length >= 4) {
-    const parsedClose = parseNumericValue(parts[3] ?? "");
-
-    if (parsedClose !== null) {
-      return parsedClose;
-    }
-  }
-
-  return null;
-}
-
-function extractPriceFromHtml(document: string): number | null {
-  const $ = load(document);
-
-  for (const selector of STOOQ_VALUE_SELECTORS) {
-    const selectorText = $(selector).first().text().trim();
-    const parsedValue = parseNumericValue(selectorText);
-
-    if (parsedValue !== null) {
-      return parsedValue;
-    }
-  }
-
-  return null;
-}
-
-function extractPriceFromRegex(document: string): number | null {
-  const preferredRegexes = [
-    /(?:last|close|kurs|price)[^0-9-]*([0-9]+(?:[.,][0-9]+)?)/i,
-    /([0-9]+(?:[.,][0-9]+)?)\s*(?:usd|eur)/i,
-  ] as const;
-
-  for (const regex of preferredRegexes) {
-    const match = document.match(regex);
-    const parsedValue = match?.[1] ? parseNumericValue(match[1]) : null;
-
-    if (parsedValue !== null) {
-      return parsedValue;
-    }
-  }
-
-  const genericMatches = document.match(/[0-9]+(?:[.,][0-9]+)?/g) ?? [];
-
-  for (const match of genericMatches) {
-    const parsedValue = parseNumericValue(match);
-
-    if (parsedValue !== null && parsedValue < 1000000) {
-      return parsedValue;
-    }
-  }
-
-  return null;
-}
-
-function extractPriceFromStooqDocument(payload: unknown): ExtractedPrice | null {
-  if (typeof payload !== "string") {
+  if (typeof body?.price !== "number" || !Number.isFinite(body.price) || body.price <= 0) {
     return null;
   }
 
-  const currentPrice =
-    extractPriceFromStooqCsv(payload) ??
-    extractPriceFromHtml(payload) ??
-    extractPriceFromRegex(payload);
-
-  if (currentPrice === null) {
-    return null;
-  }
+  const updatedAt = typeof body.updatedAt === "string" ? Date.parse(body.updatedAt) : Number.NaN;
 
   return {
-    currentPrice,
+    currentPrice: body.price,
     previousClose: null,
-    currency: "USD",
+    currency: typeof body.currency === "string" ? body.currency : "USD",
+    quoteTime: Number.isFinite(updatedAt) ? new Date(updatedAt).toISOString() : null,
   };
 }
 
@@ -338,14 +208,6 @@ function buildPriceEntry(
     extractedPrice.previousClose > 0
       ? extractedPrice.previousClose
       : null;
-  const priceChange24h =
-    previousClose !== null
-      ? Number((currentPrice - previousClose).toFixed(4))
-      : 0;
-  const priceChangePercent24h =
-    previousClose !== null && previousClose > 0
-      ? Number((((currentPrice - previousClose) / previousClose) * 100).toFixed(2))
-      : 0;
 
   return {
     symbol: target.symbol,
@@ -353,8 +215,14 @@ function buildPriceEntry(
     currentPrice,
     currency: normalizeCurrency(extractedPrice.currency ?? target.currency),
     lastUpdated: new Date().toISOString(),
-    priceChange24h,
-    priceChangePercent24h,
+    quoteTime: extractedPrice.quoteTime ?? undefined,
+    // Variation par rapport à la clôture précédente fournie par la source ; absente si inconnue (jamais 0 par défaut).
+    ...(previousClose !== null
+      ? {
+          priceChange24h: Number((currentPrice - previousClose).toFixed(4)),
+          priceChangePercent24h: Number((((currentPrice - previousClose) / previousClose) * 100).toFixed(2)),
+        }
+      : {}),
   };
 }
 
@@ -368,6 +236,14 @@ async function scrapeTargetPrice(
     try {
       const payload = await fetchSourcePayload(source.url, source.responseType);
       const extractedPrice = source.parser(payload);
+
+      if (
+        extractedPrice !== null &&
+        (extractedPrice.currentPrice < target.band[0] || extractedPrice.currentPrice > target.band[1])
+      ) {
+        errors.push(`${source.name}: ${target.symbol} price ${extractedPrice.currentPrice} outside plausible band`);
+        continue;
+      }
 
       if (extractedPrice !== null) {
         return {
@@ -389,18 +265,6 @@ async function scrapeTargetPrice(
     }
   }
 
-  if (allowFallback) {
-    return {
-      entry: buildPriceEntry(target, {
-        currentPrice: target.fallbackPrice,
-        currency: target.currency,
-      }),
-      usedFallback: true,
-      liveValueFound: false,
-      errors,
-    };
-  }
-
   return {
     entry: null,
     usedFallback: false,
@@ -413,7 +277,7 @@ export async function scrapeMetalPrices(
   options: ScrapeMetalPricesOptions = {}
 ): Promise<Partial<Mineral>[]> {
   const startedAt = Date.now();
-  const allowFallback = options.allowFallback ?? true;
+  const allowFallback = false; // jamais de prix de repli : un cours inventé est pire qu'un cours absent
   const results = await Promise.allSettled(
     METAL_TARGETS.map((target) => scrapeTargetPrice(target, allowFallback))
   );
@@ -503,14 +367,7 @@ export async function scrapeMetalPrices(
     return prices;
   }
 
-  const fallbackPrices = allowFallback
-    ? METAL_TARGETS.map((target) =>
-        buildPriceEntry(target, {
-          currentPrice: target.fallbackPrice,
-          currency: target.currency,
-        })
-      )
-    : [];
+  const fallbackPrices: Partial<Mineral>[] = [];
 
   logMetalRun({
     timestamp: new Date().toISOString(),

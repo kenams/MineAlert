@@ -359,13 +359,27 @@ async function persistScrapedData(scrapedData: ScrapedData): Promise<{
           return secondTime - firstTime;
         }
       );
-      const previousPrice =
-        monthHistoryRows.find(
-          (row) => typeof row.price === "number" && row.price > 0
-        )?.price ?? currentPrice;
-      const priceChange24h = roundTo(currentPrice - previousPrice);
-      const priceChangePercent =
-        previousPrice > 0 ? roundTo((priceChange24h / previousPrice) * 100, 2) : 0;
+      // Variation : clôture précédente de la source si fournie, sinon cours enregistré il y a au moins 20 h, sinon 0 (inconnue).
+      const dayAgo = Date.now() - 20 * 60 * 60 * 1000;
+      const referencePrice = monthHistoryRows.find(
+        (row) =>
+          typeof row.price === "number" &&
+          row.price > 0 &&
+          row.recorded_at &&
+          new Date(row.recorded_at).getTime() <= dayAgo
+      )?.price;
+      const hasSourceChange =
+        typeof entry.priceChange24h === "number" && typeof entry.priceChangePercent24h === "number";
+      const priceChange24h = hasSourceChange
+        ? roundTo(entry.priceChange24h as number)
+        : referencePrice
+          ? roundTo(currentPrice - referencePrice)
+          : 0;
+      const priceChangePercent = hasSourceChange
+        ? roundTo(entry.priceChangePercent24h as number, 2)
+        : referencePrice
+          ? roundTo(((currentPrice - referencePrice) / referencePrice) * 100, 2)
+          : 0;
 
       const weekHistoryPrices = monthHistoryRows
         .filter((row) => {
@@ -404,6 +418,7 @@ async function persistScrapedData(scrapedData: ScrapedData): Promise<{
         image_url: existing?.image_url ?? null,
         is_active: true,
         last_updated: syncedAt,
+        quote_time: entry.quoteTime ?? syncedAt,
       };
     });
 

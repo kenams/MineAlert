@@ -61,6 +61,8 @@ export type Mineral = {
   monthLow: number;
   currency: CurrencyCode;
   lastUpdated: string;
+  /** Heure du dernier cours coté par la source (peut être antérieure à lastUpdated quand le marché est fermé). */
+  quoteTime?: string;
   description: string;
   mainProducers: string[];
   useCases: string[];

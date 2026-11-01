@@ -50,6 +50,7 @@ type MineralRow = {
   use_cases: string[] | null;
   image_url: string | null;
   last_updated: string | null;
+  quote_time?: string | null;
 };
 
 type PriceHistoryRow = {
@@ -161,6 +162,7 @@ function mapMineralRow(row: MineralRow): Mineral {
     monthLow: row.month_low ?? 0,
     currency: row.currency === "EUR" ? "EUR" : "USD",
     lastUpdated: row.last_updated ?? new Date().toISOString(),
+    quoteTime: row.quote_time ?? undefined,
     description: row.description ?? "",
     mainProducers: row.main_producers ?? [],
     useCases: row.use_cases ?? [],

@@ -18,12 +18,13 @@ function formatUsd(value: number): string {
   }).format(value);
 }
 
-function formatAge(iso: string): string {
-  const minutes = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
-  if (!Number.isFinite(minutes)) return "";
+function formatAge(mineral: Mineral): string {
+  const asOf = Date.parse(mineral.quoteTime ?? mineral.lastUpdated);
+  if (!Number.isFinite(asOf)) return "";
+  const minutes = Math.max(0, Math.round((Date.now() - asOf) / 60000));
   if (minutes < 60) return `il y a ${minutes} min`;
-  const hours = Math.round(minutes / 60);
-  return hours < 48 ? `il y a ${hours} h` : `il y a ${Math.round(hours / 24)} j`;
+  // Marché fermé (week-end, nuit) : on donne la date du dernier cours coté, pas l'heure de synchronisation.
+  return `dernier cours du ${new Date(asOf).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })}`;
 }
 
 /**
@@ -112,12 +113,15 @@ export async function Hero(): Promise<JSX.Element> {
                         </p>
                       )}
                       <p className="mt-1 text-xs text-slate-400">
-                        {demo ? "Exemple" : formatAge(mineral.lastUpdated)}
+                        {demo ? "Exemple" : formatAge(mineral)}
                       </p>
                     </div>
                   ))
                 )}
               </div>
+              <p className="mt-3 text-xs text-slate-400">
+                Cours indicatifs (contrats à terme COMEX/NYMEX), qui peuvent différer du prix spot. Source : Yahoo Finance.
+              </p>
             </div>
           </Card.Body>
         </Card>
