@@ -62,6 +62,19 @@ async function getLatestDataAgeMs(): Promise<number | null> {
   return Math.max(0, Date.now() - Math.max(...timestamps));
 }
 
+function describeSyncError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    const { message, code, details, hint } = error as Record<string, unknown>;
+    return JSON.stringify({ message, code, details, hint }).slice(0, 500);
+  }
+
+  return "On-demand sync failed";
+}
+
 export async function maybeRunOnDemandSync(): Promise<boolean> {
   if (!isSupabaseConfigured()) {
     return false;
@@ -120,8 +133,7 @@ export async function maybeRunOnDemandSync(): Promise<boolean> {
         pricesUpdated: 0,
         durationMs: Date.now() - state.lastAttemptAt,
         status: "error",
-        error:
-          error instanceof Error ? error.message : "On-demand sync failed",
+        error: describeSyncError(error),
       })
     );
     return false;
