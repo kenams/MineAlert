@@ -21,7 +21,16 @@ type AlertRow = {
   created_at: string;
 };
 
-const MAX_PRICE_AGE_MS = 48 * 60 * 60 * 1000;
+export const MAX_PRICE_AGE_MS = 48 * 60 * 60 * 1000;
+const CLOCK_SKEW_MS = 5 * 60 * 1000;
+
+/**
+ * Vrai seulement si la date est valide, pas dans le futur et pas plus vieille que MAX_PRICE_AGE_MS. Refus par défaut.
+ */
+export function isFreshPrice(lastUpdated: string | null | undefined, now = Date.now()): boolean {
+  const updatedAt = lastUpdated ? Date.parse(lastUpdated) : Number.NaN;
+  return Number.isFinite(updatedAt) && now - updatedAt <= MAX_PRICE_AGE_MS && updatedAt <= now + CLOCK_SKEW_MS;
+}
 
 type MineralRow = { id: string; name: string; symbol: string; current_price: number | null; last_updated: string | null };
 
@@ -139,7 +148,7 @@ export async function runAlertSweep(): Promise<{ checked: number; events: number
     }
 
     // Pas d'alerte sur un cours qui n'est plus mis à jour (minerais sans source en direct).
-    if (!mineral.last_updated || now - Date.parse(mineral.last_updated) > MAX_PRICE_AGE_MS) {
+    if (!isFreshPrice(mineral.last_updated, now)) {
       continue;
     }
 

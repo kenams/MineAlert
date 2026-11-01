@@ -1,6 +1,6 @@
 import "server-only";
 
-import { computeChangePercent } from "@/lib/alerts/sweep";
+import { computeChangePercent, isFreshPrice } from "@/lib/alerts/sweep";
 import { sendMail } from "@/lib/email/sender";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { esc, safeHref } from "@/lib/utils/safe-html";
@@ -48,7 +48,7 @@ export async function runDailyDigest(): Promise<{ recipients: number; sent: numb
 
   for (const mineral of (minerals ?? []) as Array<{ id: string; name: string; current_price: number | null; unit: string; last_updated: string | null }>) {
     if (typeof mineral.current_price !== "number" || mineral.current_price <= 0) continue;
-    if (!mineral.last_updated || Date.now() - Date.parse(mineral.last_updated) > 48 * 60 * 60 * 1000) continue;
+    if (!isFreshPrice(mineral.last_updated)) continue;
     const change = await computeChangePercent(client, mineral.id, mineral.current_price);
     const suffix = change === null ? "" : ` (${change > 0 ? "+" : ""}${change.toFixed(1).replace(".", ",")} % en 24 h)`;
     priceLines.push(`${mineral.name} : ${fmt(mineral.current_price)} USD/${mineral.unit}${suffix}`);
